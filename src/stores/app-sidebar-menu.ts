@@ -33,7 +33,7 @@ export const useAppSidebarMenuStore = defineStore({
       {
   			url: '/page/catalog',
   			icon: 'fa fa-globe',
-  			text: 'Whatsapp Shop Link'
+  			text: 'Whatsapp Cart Setting'
   		},
       {
   			url: '/page/product_catalogs',

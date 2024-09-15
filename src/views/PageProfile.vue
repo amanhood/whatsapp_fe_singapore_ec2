@@ -212,9 +212,10 @@ function logInWithFacebook() {
       }
     },
     {
-      "config_id": 1556087551627376, // configuration ID goes here
+      "config_id": 1058568108496704, // configuration ID goes here
       "response_type": "code",    // must be set to 'code' for System User access token
       "override_default_response_type": true, // when true, any response types passed in the "response_type" will take precedence over the default types
+      "scope":"business_management, whatsapp_business_management, whatsapp_business_messaging,catalog_management",
       "extras": {
         "sessionInfoVersion": 2,  //  Receive Session Logging Info
       }

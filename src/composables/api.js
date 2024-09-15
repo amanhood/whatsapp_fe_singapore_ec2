@@ -37,6 +37,20 @@ export async function postRequest(path = null,payload,user_token){
   }
 }
 
+export async function formdataRequest(path = null,formData,user_token){
+  try {
+      const response = await axios.post(BASE_LOGIN_URL + path + "/",formData,{
+          headers:{
+              'Content-Type': 'multipart/form-data',
+              Authorization: "Token "+user_token
+          }
+      })
+      return response
+  } catch(error) {
+      return error
+  }
+}
+
 export async function putRequest(path = null,payload,user_token){
   try {
       const response = await axios.put(BASE_LOGIN_URL + path + "/",payload,{

@@ -28,7 +28,8 @@ let selected_waba_account = ref(null)
 let selected_phone_number_id = ref(null)
 let catalogs = ref([])
 let catalog_link = ref(null)
-
+let is_cart_enabled = ref(null)
+let is_catalog_visible = ref(null)
 
 async function checkWaba(){
   let data = await postRequest("check_waba",null,token)
@@ -54,6 +55,7 @@ function selectWaBa(waba_id,phone_number_id,phone_number){
   selected_waba_account.value = waba_id
   selected_phone_number_id.value = phone_number_id
   get_business_account(phone_number)
+  whatsapp_commerce_setting()
 }
 
 function closeModal(){
@@ -71,10 +73,59 @@ async function get_business_account(phone_number){
 			let message = data['data']['error']['message']
 			showToast(message)
 		} else {
-			catalogs.value = data['data']['data']
+      console.log(data['data'])
+			catalogs.value = data['data']['catalogs']['data']
       if(catalogs.value.length > 0){
         catalog_link.value = "https://wa.me/c/" + phone_number.replace(/[ +]/g, "")
       }
+		}
+  }
+}
+
+async function whatsapp_commerce_setting(){
+  let payload = {}
+  payload['waba_id'] = selected_waba_account.value
+	payload['phone_number_id'] = selected_phone_number_id.value
+  let data = await postRequest("whatsapp_commerce_setting",payload,token)
+	if(data.request.status == 200){
+		if(data['data']['error']){
+			let message = data['data']['error']['message']
+			showToast(message)
+		} else {
+      is_cart_enabled.value = data['data']['data'][0]['is_cart_enabled']
+      is_catalog_visible.value = data['data']['data'][0]['is_catalog_visible']
+		}
+  }
+}
+
+async function update_cart_status(status){
+  let payload = {}
+  payload['waba_id'] = selected_waba_account.value
+	payload['phone_number_id'] = selected_phone_number_id.value
+  payload['status'] = status
+  let data = await postRequest("update_cart_status",payload,token)
+	if(data.request.status == 200){
+		if(data['data']['error']){
+			let message = data['data']['error']['message']
+			showToast(message)
+		} else {
+      whatsapp_commerce_setting()
+		}
+  }
+}
+
+async function visible_catalog_icon(status){
+  let payload = {}
+  payload['waba_id'] = selected_waba_account.value
+	payload['phone_number_id'] = selected_phone_number_id.value
+  payload['status'] = status
+  let data = await postRequest("visible_catalog_icon",payload,token)
+	if(data.request.status == 200){
+		if(data['data']['error']){
+			let message = data['data']['error']['message']
+			showToast(message)
+		} else {
+      whatsapp_commerce_setting()
 		}
   }
 }
@@ -134,6 +185,16 @@ checkWaba()
             </div>
             <div class="form-group mb-3">
               <button type="button" class="btn btn-outline-primary mb-1 me-1" @click="selectWaBa(account.waba_id,account.phone_number_id,account.phone_number)" v-for="account in whatsapp_accounts">{{account.phone_number}}</button>
+            </div>
+            <div class="form-group mb-6" v-if="selected_phone_number_id">
+              <fragment>
+                <button type="button" class="btn btn-outline-primary mb-1 me-1" @click="update_cart_status('false')" v-if="is_cart_enabled">unable catalog</button>
+                <button type="button" class="btn btn-outline-primary mb-1 me-1" @click="update_cart_status('true')" v-else>enable catalog</button>
+              </fragment>
+              <fragment>
+                <button type="button" class="btn btn-outline-primary mb-1 me-1" @click="visible_catalog_icon('false')" v-if="is_catalog_visible">catalog icon invisible</button>
+                <button type="button" class="btn btn-outline-primary mb-1 me-1" @click="visible_catalog_icon('true')" v-else>catalog icon visible</button>
+              </fragment>
             </div>
           </div>
         </div>

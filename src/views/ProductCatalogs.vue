@@ -1,7 +1,7 @@
 <script setup>
 import { useUserSessionStore } from '@/stores/user-session';
 import { ref } from 'vue'
-import { getRequest,postRequest,deleteRequest } from '../composables/api.js'
+import { getRequest,postRequest,deleteRequest,formdataRequest } from '../composables/api.js'
 import { Toast } from 'bootstrap';
 import { useRouter, RouterLink } from 'vue-router';
 import draggable from 'vuedraggable'
@@ -20,6 +20,47 @@ let input_business_account_id = ref(null)
 let notification_message = ref(null)
 let catalog_name = ref(null)
 let selected_catalog = ref(null)
+let retailer_id = ref(null)
+let name = ref(null)
+let description = ref(null)
+let price = ref(null)
+let sale_price = ref(null)
+let currency = ref(null)
+let image_url = ref(null)
+let additional_image_urls = ref(null)
+let availability = ref(null)
+let url = ref(null)
+let retailer_product_group_id = ref(null)
+let brand = ref(null)
+let weight = ref(null)
+let weight_unit = ref(null)
+let availability_options = [
+  {value:'in stock',label:'in stock'},
+  {value:'out of stock',label:'out of stock'},
+  {value:'preorder',label:'preorder'},
+  {value:'available for order',label:'available for order'},
+  {value:'discontinued',label:'discontinued'},
+  {value:'pending',label:'pending'},
+  {value:'pending',label:'mark_as_sold'}
+]
+let currency_options = [
+  {value:'HKD',label:'HKD'},
+  {value:'USD',label:'USD'}
+]
+let weight_options = [
+  {value:'kg',label:'kg'},
+  {value:'g',label:'g'},
+  {value:'lb',label:'lb'},
+  {value:'oz',label:'oz'}
+]
+let single_or_multiple = ref(null)
+let selectedFile = ref(null)
+let update_only = ref(null)
+let update_options = [
+  {value:'true',label:'true'},
+  {value:'false',label:'false'}
+]
+
 token = sessionStorage.getItem("token")
 username = sessionStorage.getItem("username")
 
@@ -93,8 +134,7 @@ function checkLogin(){
   }
 }
 
-function onMouseOver(catalog) {
-  console.log(catalog)
+function selectCatalog(catalog) {
   selected_catalog.value = catalog
 }
 
@@ -129,13 +169,93 @@ async function editCatalog(catalog){
   }
 }
 
+async function uploadProduct(){
+  let payload = {}
+  payload['business_account_id'] = business_account_id.value
+  payload['waba_id'] = selected_waba_account.value
+  payload['phone_number_id'] = selected_phone_number_id.value
+  payload['catalog_id'] = selected_catalog.value.id
+  payload['retailer_id'] = retailer_id.value
+  payload['name'] = name.value
+  payload['description'] = description.value
+  payload['price'] = price.value
+  payload['sale_price'] = sale_price.value
+  payload['currency'] = currency.value
+  payload['image_url'] = image_url.value
+  let image_urls = []
+  if(additional_image_urls.value.includes(',')){
+    additional_image_urls.value = additional_image_urls.value.replace(/(\r\n|\n|\r)/gm, '')
+    image_urls = additional_image_urls.value.split(',')
+  } else {
+    image_urls.push(additional_image_urls.value)
+  }
+  payload['additional_image_urls'] = image_urls
+  payload['availability'] = availability.value
+  payload['url'] = url.value
+  payload['retailer_product_group_id'] = retailer_product_group_id.value
+  payload['brand'] = brand.value
+  payload['weight'] = weight.value
+  payload['weight_unit'] = weight_unit.value
+  let data = await postRequest("upload_product",payload,token)
+  if(data.request.status == 200){
+    if(data['data']['error']){
+			let message = data['data']['error']['message']
+			showToast(message)
+		} else {
+      let message = "Product is successfully created"
+      showToast(message)
+    }
+  } else {
+    console.log(data)
+  }
+}
+
+function singleOrMutliple(uplaod_type){
+  single_or_multiple.value = uplaod_type
+}
+
+function onFileChange(event) {
+  selectedFile.value = event.target.files[0]; // Store the selected file
+}
+
+async function uploadFile(){
+  if(!selectedFile.value) {
+    let message = 'Please select a file to upload'
+    showToast(message)
+    return;
+  }
+  const formData = new FormData();
+  formData.append('file', selectedFile.value);
+  formData.append('waba_id', selected_waba_account.value);
+  formData.append('phone_number_id', selected_phone_number_id.value);
+  formData.append('catalog_id', selected_catalog.value.id);
+  formData.append('update_only', update_only.value);
+  selected_catalog
+  let data = await formdataRequest("batch_import_products",formData,token)
+  if(data.request.status == 200){
+    if(data['data']['error']){
+			let message = data['data']['error']['message']
+			showToast(message)
+		} else {
+      let message = "Product is successfully created"
+      showToast(message)
+    }
+  } else {
+    console.log(data)
+  }
+
+}
+
+
+
 checkLogin()
 checkWaba()
 </script>
 
 <style scoped>
-#margin_top_10 {
+#margin_10 {
   margin-top:10px;
+  margin-bottom:10px;
 }
 </style>
 
@@ -201,15 +321,18 @@ checkWaba()
     <card-body class="pb-2" v-if="business_account_id">
       <div class="row">
         <div class="col-xl-3" style="border:1px solid #ccc;">
-          <div class="flex-fill fw-bold fs-16px" style="margin-top:10px;margin-bottom:10px;">Product Catalogues</div>
+          <div class="flex-fill fw-bold fs-16px" id="margin_10">Product Catalogues</div>
 
           <div class="row" v-for="catalog in catalogs" v-if="catalogs.length > 0">
             <div class="row" style="margin-bottom:10px;">
-              <div class="col-md-10">
-                <input type="text" class="form-control" placeholder="Title" v-model="catalog.name" @mouseover="onMouseOver(catalog)">
+              <div class="col-md-7">
+                <input type="text" class="form-control" placeholder="Title" v-model="catalog.name">
               </div>
               <div class="col-md-2">
                 <button type="button" class="btn btn-default mb-1 me-1" @click="editCatalog(catalog)">Edit</button>
+              </div>
+              <div class="col-md-2">
+                <button type="button" class="btn btn-default mb-1 me-1" @click="selectCatalog(catalog)">Select</button>
               </div>
             </div>
             <hr>
@@ -217,19 +340,119 @@ checkWaba()
 
 
           <div class="row">
-            <div class="row" id="margin_top_10">
+            <div class="row" id="margin_10">
               <div class="col-md-10">
                 <input type="text" class="form-control" placeholder="Catalog Name" v-model="catalog_name">
               </div>
             </div>
-            <div class="form-group mb-3" id="margin_top_10">
+            <div class="form-group mb-3" id="margin_10">
               <button type="button" class="btn btn-default mb-1 me-1" @click="addCatalog">Add Catalog</button>
             </div>
           </div>
         </div>
 
         <div class="col-xl-9" style="border-right:1px solid #ccc;border-top:1px solid #ccc;border-bottom:1px solid #ccc;">
-          <div class="flex-fill fw-bold fs-16px" id="margin_top_10">Content</div>
+          <fragment v-if="selected_catalog">
+          <div class="flex-fill fw-bold fs-16px" id="margin_10">Upload Product(s) to ({{selected_catalog.name}})</div>
+          <div class="row" id='margin_10'>
+            <div class="col-md-3">
+              <div class="row">
+                <div class="col-md-6"><button type="button" class="btn btn-default mb-1 me-1" @click="singleOrMutliple('single')">Single Product</button></div>
+                <div class="col-md-6"><button type="button" class="btn btn-default mb-1 me-1" @click="singleOrMutliple('multiple')">Multiple Products</button></div>
+              </div>
+            </div>
+          </div>
+          <hr>
+          </fragment>
+          <fragment v-if="selected_catalog && single_or_multiple =='single'">
+            <div class="row" id='margin_10'>
+              <div class="col-md-3">
+                <input type="text" class="form-control" placeholder="retailer_id" v-model="retailer_id"/>
+              </div>
+              <div class="col-md-3">
+                <input type="text" class="form-control" placeholder="name" v-model="name"/>
+              </div>
+              <div class="col-md-3">
+                <textarea class="form-control" id="exampleFormControlTextarea1" rows="3" placeholder="product description" v-model="description"></textarea>
+              </div>
+              <div class="col-md-3">
+                <input type="text" class="form-control" placeholder="retailer_product_group_id" v-model="retailer_product_group_id"/>
+              </div>
+            </div>
+            <div class="row" id='margin_10'>
+              <div class="col-md-3">
+                <select class="form-select" id="exampleFormControlSelect1" v-model="currency">
+                  <option v-for="item in currency_options" :key="item.value" :value="item.value">{{item.label}}</option>
+                </select>
+              </div>
+              <div class="col-md-3">
+                <input type="number" class="form-control" placeholder="Price (100 = 1.00)" v-model="price"/>
+              </div>
+              <div class="col-md-3">
+                <input type="number" class="form-control" placeholder="Sale Price (100 = 1.00)" v-model="sale_price"/>
+              </div>
+              <div class="col-md-3">
+                <select class="form-select" id="exampleFormControlSelect1" v-model="availability">
+                  <option v-for="item in availability_options" :key="item.value" :value="item.value">{{item.label}}</option>
+                </select>
+              </div>
+            </div>
+            <div class="row" id='margin_10'>
+              <div class="col-md-3">
+                <input type="text" class="form-control" placeholder="url" v-model="url"/>
+              </div>
+              <div class="col-md-3">
+                <input type="text" class="form-control" placeholder="Brand" v-model="brand"/>
+              </div>
+              <div class="col-md-3">
+                <input type="number" class="form-control" placeholder="Weight (kg)" v-model="weight"/>
+              </div>
+              <div class="col-md-3">
+                <select class="form-select" id="exampleFormControlSelect1" v-model="weight_unit">
+                  <option v-for="item in weight_options" :key="item.value" :value="item.value">{{item.label}}</option>
+                </select>
+              </div>
+            </div>
+            <div class="row" id='margin_10'>
+              <div class="col-md-6">
+                <input type="text" class="form-control" placeholder="image_url" v-model="image_url"/>
+              </div>
+              <div class="col-md-6">
+                <textarea class="form-control" id="exampleFormControlTextarea1" rows="3" placeholder="image urls, seperate by ," v-model="additional_image_urls"></textarea>
+              </div>
+            </div>
+            <div class="row" id='margin_10'>
+              <div class="col-md-3">
+                <button type="button" class="btn btn-default" @click="uploadProduct">Upload a product</button>
+              </div>
+            </div>
+          </fragment>
+          <fragment v-if="selected_catalog && single_or_multiple =='multiple'">
+          <div class="row" id='margin_10'>
+            <div class="col-md-6">
+              <div class="row" style="margin-bottom:10px;">
+                <a href="/sample_template.csv">Download a template for batch importing products</a>
+              </div>
+              <div class="row" style="margin-bottom:10px;padding-left:10px;">
+                Please select "false" if items at uplaoding csv is all items you wish to upload to Facebook product catalog. The existing items at catalog will be "DELETED" if they are not existed at csv file.
+              </div>
+              <div class="row" style="margin-bottom:10px;padding-left:10px;">
+                Please select "true" if you want to add new items and edit values of existing items.
+              </div>
+              <div class="row" style="margin-bottom:10px;">
+                <div class="col-md-3">
+                  <select class="form-select" id="exampleFormControlSelect1" v-model="uplaod_only">
+                    <option v-for="item in update_options" :key="item.value" :value="item.value">{{item.label}}</option>
+                  </select>
+                </div>
+              </div>
+              <div class="row">
+                <div class="col-md-6"><input type="file" class="form-control" id="defaultFile" @change="onFileChange" accept=".csv" /></div>
+                <div class="col-md-6"><button @click="uploadFile" class="btn btn-default" :disabled="!selectedFile">Upload</button></div>
+              </div>
+            </div>
+          </div>
+          </fragment>
 
         </div>
       </div>

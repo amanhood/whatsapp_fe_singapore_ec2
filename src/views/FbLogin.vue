@@ -36,6 +36,8 @@ export default {
 		      // if user finishes the Embedded Signup flow
 		      if (data.event === 'FINISH') {
 		        const {phone_number_id, waba_id} = data.data;
+						console.log("finished")
+						console.log(data.data)
 		      }
 		      // if user cancels the Embedded Signup flow
 		      else {
@@ -68,7 +70,7 @@ export default {
 		      config_id: '1058568108496704', // configuration ID goes here
 		      response_type: 'code',    // must be set to 'code' for System User access token
 		      override_default_response_type: true, // when true, any response types passed in the "response_type" will take precedence over the default types
-					scope:"business_management,whatsapp_business_management",
+					scope:"business_management, whatsapp_business_management, whatsapp_business_messaging,catalog_management",
 					extras:{
 						feature:"whatsapp_embedded_signup",
 						version:2,
@@ -87,7 +89,7 @@ export default {
           appId: "1060499497949619", //You will need to change this
           cookie: true, // This is important, it's not enabled by default
 					xfbml: true,
-          version: "v17.0"
+          version: "v20.0"
         });
       };
     },
