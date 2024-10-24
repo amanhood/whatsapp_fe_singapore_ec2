@@ -12,16 +12,12 @@ let selected_language = ref(null)
 let template_name = ref(null)
 
 let header = ref(null)
-let header_text = ref(null)
-let header_variables = []
-let number_of_header_variables = ref(0)
-let header_text_message = ref(null)
+let header_variables = ref([])
+let header_warning_message = ref(null)
 
 let body = ref(null)
-let body_text = ref(null)
-let number_of_body_variables = ref(0)
-let body_variables = []
-let body_text_message = ref(null)
+let body_variables = ref([])
+let body_warning_message = ref(null)
 
 let selected_button_type = ref(null)
 let custom_button_shown = ref(false)
@@ -30,7 +26,7 @@ let button_id = ref(1)
 let footer = ref(null)
 let submit_button_shown = ref(true)
 
-const emit = defineEmits(["gettemplates","showtoast"])
+const emit = defineEmits(["showtoast"])
 const props = defineProps(['waba_id','phone_number_id'])
 
 token = sessionStorage.getItem("token")
@@ -48,41 +44,6 @@ let languages = [
         { id:'es',title: "Spanish" }
       ]
 
-function addHeaderVariables(){
-    if(number_of_header_variables.value == 0){
-      number_of_header_variables.value += 1
-      if(!header.value){
-        header.value = ''
-      }
-      header.value = header.value + "{{" + number_of_header_variables.value + "}}"
-    }
-}
-
-watch(header,(newValue,oldValue)=>{
-    if(header.value){
-      const matches = header.value.match(/\{\{.*?\}\}/g);
-      const count = matches ? matches.length : 0;
-      number_of_header_variables.value = count
-    } else {
-      number_of_header_variables.value = 0
-    }
-})
-
-watch(header_text,(newValue,oldValue)=>{
-    let header_variables = []
-    if(header_text.value.includes(',')){
-      header_variables = header_text.value.split(",")
-    } else {
-      header_variables.push(header_variable.value)
-    }
-    if(number_of_header_variables.value < header_variables.length){
-      header_text_message.value = "too many variables, only 1 variable is allowed"
-    } else {
-      header_text_message.value = null
-    }
-})
-
-
 function urltype(urltype,button_id){
     //console.log(urltype)
     //console.log(buttons.value)
@@ -97,41 +58,59 @@ function deleteButton(button_id){
     //console.log(buttons.value)
 }
 
-watch(body,(newValue,oldValue)=>{
-    if(body.value){
-      const matches = body.value.match(/\{\{.*?\}\}/g);
-      const count = matches ? matches.length : 0;
-      number_of_body_variables.value = count
+function addHeaderVariables(){
+    if(header_variables.value.length == 0){
+      header_variables.value.push({'id':header_variables.value.length,'value':''})
+      if(!header.value){
+        header.value = ''
+      }
+      header.value = header.value + "{{" + header_variables.value.length + "}}"
     } else {
-      number_of_body_variables.value = 0
+      let notification_message = "Only one variable is allowed"
+      emit('showtoast',notification_message)
     }
-    if(number_of_body_variables.value != body_variables.length){
-      body_text_message.value = "unmatched variables at body, please check"
-    } else {
-      body_text_message.value = null
+
+}
+
+watch(header,(newValue,oldValue)=>{
+    if(newValue){
+      const openBrackets = (newValue.match(/\{\{/g) || []).length;
+      const closeBrackets = (newValue.match(/\}\}/g) || []).length;
+      if (openBrackets !== closeBrackets) {
+        header_warning_message.value = "This template contains variable parameters with incorrect formatting. Variable parameters must be whole numbers with two sets of curly brackets (for example, {{1}}, {{2}})."
+      } else {
+        const matches = newValue.match(/\{\{.*?\}\}/g);
+        const count = matches ? matches.length : 0;
+        if (count === 0) {
+          header_variables.value = [];
+        }
+        header_warning_message.value = null
+      }
     }
 })
 
 function addBodyVariables(){
-    number_of_body_variables.value += 1
+    body_variables.value.push({'id':body_variables.value.length,'value':''})
     if(!body.value){
       body.value = ''
     }
-    body.value = body.value + "{{" + number_of_body_variables.value + "}}"
+    body.value = body.value + "{{" + body_variables.value.length + "}}"
 }
 
-watch(body_text,(newValue,oldValue)=>{
-    if(body_text.value.includes(',')){
-      body_variables = []
-      body_variables  = body_text.value.split(",")
-    } else {
-      body_variables = []
-      body_variables.push(body_text.value)
-    }
-    if(number_of_body_variables.value != body_variables.length){
-      body_text_message.value = "unmatched variables at body, please check"
-    } else {
-      body_text_message.value = null
+watch(body,(newValue,oldValue)=>{
+    if(body.value){
+      const openBrackets = (newValue.match(/\{\{/g) || []).length;
+      const closeBrackets = (newValue.match(/\}\}/g) || []).length;
+      if (openBrackets !== closeBrackets) {
+        body_warning_message.value = "This template contains variable parameters with incorrect formatting. Variable parameters must be whole numbers with two sets of curly brackets (for example, {{1}}, {{2}})."
+      } else {
+        const matches = newValue.match(/\{\{.*?\}\}/g);
+        const count = matches ? matches.length : 0;
+        body_warning_message.value = null
+        if(body_variables.value.length > count){
+          body_variables.value.splice(-1, 1)
+        }
+      }
     }
 })
 
@@ -170,7 +149,7 @@ function submit(){
         data['language'] = selected_language.value.id
         data['component'] = []
 
-        if(header_text.value){
+        if(header_variables.value.length > 0){
           header_component = ({
             "type": "HEADER",
             "format": "TEXT",
@@ -179,7 +158,7 @@ function submit(){
             /* Example required if header uses a variable */
             "example": {
               "header_text": [
-                header_text.value
+                header_variables.value[0].value
               ]
             }
           })
@@ -191,11 +170,12 @@ function submit(){
           })
         }
         if(body_variables.length > 0){
+          let variables = body_variables.value.map(item => item.value);
           data['component'].push({
             "type": "body",
             "text": body.value,
             "example": {
-              "body_text": [body_variables]
+              "body_text": [variables]
             }
           })
         } else {
@@ -286,20 +266,33 @@ async function submitForm(payload){
         <div class="row" style="margin-bottom:10px;">
           <div class="flex-fill fw-bold fs-16px">Header</div>
         </div>
-        <div class="row">
+        <div class="row" style="margin-bottom:10px;">
           <div class="col-md-6">
-            <input type="text" class="form-control" placeholder="header title" v-model="header"/>
-          </div>
-          <div class="col-md-3">
-            <input type="text" class="form-control" placeholder="variable" v-model="header_text"/>
-          </div>
-          <div class="col-md-3">
-            <button type="button" class="btn btn-default mb-1 me-1" @click="addHeaderVariables()">Add Variables</button>
+            <input type="text" class="form-control" placeholder="Header title" v-model="header"/>
           </div>
         </div>
-        <div v-if="header_text_message" style="color:red;">
-          {{header_text_message}}
+
+        <div class="row" style="margin-bottom:10px;" v-if="header_warning_message">
+          <div class="col-6">
+            <card>
+              <card-body style="background-color:#FFF4F2;">
+                <p class="card-text">{{header_warning_message}}</p>
+              </card-body>
+            </card>
+          </div>
         </div>
+
+        <div class="row" style="margin-bottom:20px;">
+          <div class="col-md-3">
+            <button type="button" class="btn btn-yellow mb-1 me-1" @click="addHeaderVariables()" v-if="!uploaded_file">+ Variables</button>
+          </div>
+        </div>
+        <div class="row" style="margin-bottom:20px;">
+          <div class="col-md-6" v-for="variable in header_variables">
+            <input type="text" class="form-control" placeholder="variables" v-model="variable.value"/>
+          </div>
+        </div>
+
       </div>
     </div>
   </card-body>
@@ -310,19 +303,29 @@ async function submitForm(payload){
         <div class="row" style="margin-bottom:10px;">
           <div class="flex-fill fw-bold fs-16px">Body</div>
         </div>
-        <div class="row" style="margin-bottom:20px;">
+        <div class="row" style="margin-bottom:10px;">
           <div class="col-md-6">
             <textarea class="form-control" id="exampleFormControlTextarea1" rows="3" v-model="body" placeholder="Body {{1}} {{2}} {{3}}"></textarea>
           </div>
-          <div class="col-md-3">
-            <input type="text" class="form-control" placeholder="variables" v-model="body_text"/>
-          </div>
-          <div class="col-md-3">
-            <button type="button" class="btn btn-default mb-1 me-1" @click="addBodyVariables()">Add Variables</button>
+        </div>
+        <div class="row" style="margin-bottom:10px;" v-if="body_warning_message">
+          <div class="col-6">
+            <card>
+              <card-body style="background-color:#FFF4F2;">
+                <p class="card-text">{{body_warning_message}}</p>
+              </card-body>
+            </card>
           </div>
         </div>
-        <div v-if="body_text_message" style="color:red;">
-          {{body_text_message}}
+        <div class="row" style="margin-bottom:10px;">
+          <div class="col-md-3">
+            <button type="button" class="btn btn-yellow mb-1 me-1" @click="addBodyVariables()">+ Variables</button>
+          </div>
+        </div>
+        <div class="row" style="margin-bottom:10px;" v-for="variable in body_variables">
+          <div class="col-md-6">
+            <input type="text" class="form-control" placeholder="variable" v-model="variable.value"/>
+          </div>
         </div>
       </div>
     </div>
@@ -348,7 +351,7 @@ async function submitForm(payload){
       <div class="col-md-12">
         <div class="row">
           <div class="col-md-3">
-            <button type="button" class="btn btn-default mb-1 me-1" @click="submit" v-if="submit_button_shown">Submit</button>
+            <button type="button" class="btn btn-teal mb-1 me-1" @click="submit" v-if="submit_button_shown">Create Template</button>
           </div>
         </div>
       </div>

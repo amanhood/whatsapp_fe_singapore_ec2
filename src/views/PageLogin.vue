@@ -2,7 +2,7 @@
 import { useAppOptionStore } from '@/stores/app-option';
 import { useUserSessionStore } from '@/stores/user-session';
 import { useRouter, RouterLink } from 'vue-router';
-import { userRequest } from '../composables/api.js'
+import { userRequest,postRequest } from '../composables/api.js'
 import { Toast } from 'bootstrap';
 
 const appOption = useAppOptionStore();
@@ -13,6 +13,7 @@ export default {
 		return {
 			username:null,
 			password:null,
+			token:null,
 			notification_message:null
 		}
 	},
@@ -31,12 +32,12 @@ export default {
 			let payload = {'username':this.username,'password':this.password}
 			let data = await userRequest("api-user-login",payload)
 			if(data.request.status == 200){
-				let token = data.data.token
+				this.token = data.data.token
 				let username = data.data.username
 				let access_token = data.data.access_token
-				sessionStorage.setItem("token",token)
+				sessionStorage.setItem("token",this.token)
 				sessionStorage.setItem("username",username)
-				this.$router.push('/page/profile');
+				this.$router.push('/page/connect_whatsapp');
 			} else {
 				let message = "Login Failed, Your account may be blocked by some reasons"
 				this.showToast(message)

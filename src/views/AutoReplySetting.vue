@@ -11,6 +11,7 @@ const router = useRouter()
 let username = ref(null)
 let token = ref(null)
 let whatsapp_accounts = ref([])
+let select_account = ref(null)
 let selected_waba_account = ref(null)
 let selected_phone_number_id = ref(null)
 let selected_phone_number = ref(null)
@@ -63,7 +64,17 @@ function checkLogin(){
 
 async function checkWaba(){
   let data = await postRequest("check_waba",null,token)
-  whatsapp_accounts.value = data['data']['whatsapp_accounts']
+  data['data']['whatsapp_accounts'].forEach((item, i) => {
+    whatsapp_accounts.value.push({'id':item.phone_number_id,'value':item.phone_number,'waba':item.waba_id})
+  });
+}
+
+function selectAccount(){
+  selected_phone_number_id.value = select_account.value.id
+  selected_waba_account.value = select_account.value.waba
+  selected_phone_number.value = select_account.value.value
+  getFlows()
+  getAutoReplyMessages()
 }
 
 async function getFlows(){
@@ -98,13 +109,6 @@ async function getAutoReplyMessages(){
   }
 }
 
-async function selectWaBa(waba_id,phone_number_id,phone_number){
-  selected_waba_account.value = waba_id
-  selected_phone_number_id.value = phone_number_id
-  selected_phone_number.value = phone_number
-  getFlows()
-  getAutoReplyMessages()
-}
 
 async function createAutoReplyMessage(){
   if (key.value){
@@ -314,11 +318,11 @@ checkWaba()
         </div>
 
         <div class="modal-body">
-          <button type="button" class="btn btn-default" data-bs-dismiss="modal" @click="deleteAutoReplyMessage">Delete</button>
+          <button type="button" class="btn btn-danger" data-bs-dismiss="modal" @click="deleteAutoReplyMessage">Delete</button>
         </div>
 
         <div class="modal-footer">
-          <button type="button" class="btn btn-default" data-bs-dismiss="modal">Close</button>
+          <button type="button" class="btn btn-yellow" data-bs-dismiss="modal">Close</button>
         </div>
       </div>
     </div>
@@ -333,11 +337,40 @@ checkWaba()
         </div>
 
         <div class="modal-body">
-          <div class="row" v-for="button in selected_buttons">
+          <div class="row">
+            <div class="form-group mb-3" style="margin-top:10px;">
+              <button type="button" class="btn btn-teal" @click="addButtonAtEditMessage">Add Button</button>
+            </div>
+          </div>
+          <div class="row" v-for="button in selected_buttons" style="margin-bottom:40px;">
+
             <div class="col-xl-4">
               <div class="row">
-                <div class="col-md-4"><input type="text" class="form-control" placeholder="Key" v-model="button.key"/></div>
-                <div class="col-md-4"><input type="number" class="form-control" placeholder="Sequence" v-model="button.sequence"/></div>
+                <div class="col-md-4">Key</div>
+                <div class="col-md-4">Sequence</div>
+                <div class="col-md-4">Button type</div>
+              </div>
+            </div>
+
+            <div class="col-xl-8">
+              <div class="row" v-if="button.button_type =='text_message'">
+                <div class="col-md-4">Button title</div>
+                <div class="col-md-8">Text message</div>
+              </div>
+              <div class="row" v-if="button.button_type =='flow'">
+                <div class="col-md-4">Button title</div>
+                <div class="col-md-8">Flow template</div>
+              </div>
+              <div class="row" v-if="button.button_type =='url'">
+                <div class="col-md-8">Button content</div>
+              </div>
+            </div>
+
+
+            <div class="col-xl-4">
+              <div class="row">
+                <div class="col-md-4"><input type="text" class="form-control" placeholder="" v-model="button.key"/></div>
+                <div class="col-md-4"><input type="number" class="form-control" placeholder="" v-model="button.sequence"/></div>
                 <div class="col-md-4">
                     <select class="form-select" id="exampleFormControlSelect1" v-model="button.button_type">
                       <option v-for="item in button_types" :key="item.value" :value="item.value">{{item.label}}</option>
@@ -347,22 +380,25 @@ checkWaba()
             </div>
             <div class="col-xl-8">
               <div class="row" v-if="button.button_type =='text_message'">
-                <div class="col-md-4"><input type="text" class="form-control" placeholder="Button title" v-model="button.title"/></div>
+                <div class="col-md-4"><input type="text" class="form-control" placeholder="" v-model="button.title"/></div>
                 <div class="col-md-7">
-                    <textarea class="form-control" placeholder="Text message" v-model="button.button_text" rows="3"/>
+                    <textarea class="form-control" placeholder="" v-model="button.button_text" rows="3"/>
                 </div>
-                <div class="col-md-1"><button type="button" class="btn btn-default mb-1 me-1" @click="deleteButtonAtEditMessage(button.id)(button.id)">X</button></div>
+                <div class="col-md-1"><button type="button" class="btn btn-danger mb-1 me-1" @click="deleteButtonAtEditMessage(button.id)(button.id)">X</button></div>
               </div>
               <div class="row" v-else-if="button.button_type =='flow'">
-                <div class="col-md-4"><input type="text" class="form-control" placeholder="Button title" v-model="button.title"/></div>
+                <div class="col-md-4"><input type="text" class="form-control" placeholder="" v-model="button.title"/></div>
                 <div class="col-md-7" v-if="flows.length > 0">
                     <select class="form-select" id="exampleFormControlSelect2" v-model="button.flow_id">
                       <option v-for="item in flows" :key="item.value" :value="item.value">{{item.label}}</option>
                     </select>
                 </div>
-                <div class="col-md-1"><button type="button" class="btn btn-default mb-1 me-1" @click="deleteButtonAtEditMessage(button.id)(button.id)">X</button></div>
+                <div class="col-md-1"><button type="button" class="btn btn-danger mb-1 me-1" @click="deleteButtonAtEditMessage(button.id)(button.id)">X</button></div>
               </div>
               <div class="row" v-else-if="button.button_type =='url'">
+                
+
+
                 <div class="col-md-3">
                   <input type="text" class="form-control" placeholder="Button title" v-model="button.title"/>
                 </div>
@@ -381,19 +417,14 @@ checkWaba()
                 <div class="col-md-8" style="margin-top:10px;">
                   <input type="text" class="form-control" placeholder="Url" v-model="button.url"/>
                 </div>
-                <div class="col-md-1" style="margin-top:10px;"><button type="button" class="btn btn-default mb-1 me-1" @click="deleteButtonAtEditMessage(button.id)(button.id)">X</button></div>
+                <div class="col-md-1" style="margin-top:10px;"><button type="button" class="btn btn-danger mb-1 me-1" @click="deleteButtonAtEditMessage(button.id)(button.id)">X</button></div>
               </div>
-            </div>
-          </div>
-          <div class="row">
-            <div class="form-group mb-3" style="margin-top:10px;">
-              <button type="button" class="btn btn-default" @click="addButtonAtEditMessage">Add Button</button>
             </div>
           </div>
         </div>
 
         <div class="modal-footer">
-          <button type="button" class="btn btn-default" data-bs-dismiss="modal">Close</button>
+          <button type="button" class="btn btn-yellow" data-bs-dismiss="modal">Close</button>
         </div>
       </div>
     </div>
@@ -550,38 +581,48 @@ checkWaba()
 
   <card>
     <card-body class="pb-2">
-      <div class="row" v-if="whatsapp_accounts.length > 0">
-        <div class="col-xl-9">
-          <div class="form-group mb-3">
-            <div class="flex-fill fw-bold fs-16px">Select business whatsapp account for creating Auto Reply Message</div>
+      <div class="row">
+        <div class="col-md-6">
+          <div class="row" style="margin-bottom:10px;">
+            <div class="flex-fill fw-bold fs-16px">Select sender</div>
           </div>
-          <div class="form-group mb-3">
-            <button type="button" class="btn btn-outline-primary mb-1 me-1" @click="selectWaBa(account.waba_id,account.phone_number_id,account.phone_number)" v-for="account in whatsapp_accounts">{{account.phone_number}}</button>
+          <div class="row">
+            <div class="col-md-6">
+              <v-select v-model="select_account" :options="whatsapp_accounts" label="value" @update:modelValue="selectAccount"></v-select>
+            </div>
           </div>
         </div>
       </div>
-      <hr>
+    </card-body>
+    <hr>
+
+    <card-body class="pb-2" v-if="selected_waba_account">
+      <div class="row">
+        <div class="form-group mb-3">
+          <button type="button" class="btn btn-teal mb-1 me-1" data-bs-toggle="modal" data-bs-target="#modalLg2">Create Auto Reply</button>
+        </div>
+      </div>
     </card-body>
 
     <card-body class="pb-2">
       <div class="row">
         <div class="col-md-3">
           <div class="row">
-            <div class="col-md-4">
+            <div class="col-md-2">
               <label for="formControlRange" class="form-label">Level</label>
             </div>
-            <div class="col-md-4">
+            <div class="col-md-7">
               <label for="formControlRange" class="form-label">Key</label>
             </div>
-            <div class="col-md-4">
-              <label for="formControlRange" class="form-label">Sequence</label>
+            <div class="col-md-3">
+              <label for="formControlRange" class="form-label">Order</label>
             </div>
           </div>
         </div>
         <div class="col-md-5">
           <div class="row">
             <div class="col-md-9">
-              <label for="formControlRange" class="form-label">Flow / Text/ Button</label>
+              <label for="formControlRange" class="form-label">Message content</label>
             </div>
             <div class="col-md-3">
               <label for="formControlRange" class="form-label">Type</label>
@@ -591,13 +632,13 @@ checkWaba()
         <div class="col-md-4">
           <div class="row">
             <div class="col-md-4">
-              <label for="formControlRange" class="form-label">Buttons</label>
+              <label for="formControlRange" class="form-label">Button(s)</label>
             </div>
             <div class="col-md-4">
-              <label for="formControlRange" class="form-label">update</label>
+              <label for="formControlRange" class="form-label">Update</label>
             </div>
             <div class="col-md-4">
-              <label for="formControlRange" class="form-label">delete</label>
+              <label for="formControlRange" class="form-label">Delete</label>
             </div>
           </div>
         </div>
@@ -605,47 +646,77 @@ checkWaba()
       <div class="row" v-for="reply in auto_reply_messages" style="margin-bottom:10px;">
         <div class="col-md-3">
           <div class="row">
-            <div class="col-md-4">
+            <div class="col-md-2">
               <label for="formControlRange">1</label>
             </div>
-            <div class="col-md-4">
+            <div class="col-md-7">
               <input type="text" class="form-control" id="exampleFormControlInput1" v-model="reply.key"/>
             </div>
-            <div class="col-md-4">
-              <input type="text" class="form-control" id="exampleFormControlInput1" v-model="reply.sequence"/>
+            <div class="col-md-3">
+              <input type="number" class="form-control" id="exampleFormControlInput1" v-model="reply.sequence"/>
             </div>
           </div>
         </div>
         <div class="col-md-5">
           <div class="row">
             <div class="col-md-9" v-if="reply.reply_type == 'flow'">
-              <select class="form-select" id="exampleFormControlSelect2" v-model="reply.flow_id">
-                <option v-for="item in flows" :key="item.value" :value="item.value">{{item.label}}</option>
-              </select>
+              <div class="mb-3 row">
+                <label for="inputEmail3" class="col-sm-2 col-form-label"></label>
+                <div class="col-sm-10">
+                  <select class="form-select" id="exampleFormControlSelect2" v-model="reply.flow_id">
+                    <option v-for="item in flows" :key="item.value" :value="item.value">{{item.label}}</option>
+                  </select>
+                </div>
+              </div>
             </div>
             <div class="col-md-9" v-else-if="reply.reply_type == 'text_message'">
-              <textarea class="form-control" v-model="reply.message" rows="3" v-if="reply.reply_type == 'text_message'"/>
-              <textarea class="form-control" v-model="reply.message" rows="3" :readonly="true" v-else />
+              <div class="mb-3 row">
+                <label for="inputEmail3" class="col-sm-2 col-form-label">Message</label>
+                <div class="col-sm-10">
+                  <textarea class="form-control" v-model="reply.message" rows="3" v-if="reply.reply_type == 'text_message'"/>
+                  <textarea class="form-control" v-model="reply.message" rows="3" :readonly="true" v-else />
+                </div>
+              </div>
             </div>
             <div class="col-md-9" v-else-if="reply.reply_type == 'button'">
-              <textarea class="form-control" v-model="reply.button_body" v-if="reply.reply_type == 'button'" rows="3"/>
-              <textarea class="form-control" v-model="reply.button_body" rows="3" :readonly="true" v-else />
+              <div class="mb-3 row">
+                <label for="inputEmail3" class="col-sm-2 col-form-label">Button Text</label>
+                <div class="col-sm-10">
+                  <textarea class="form-control" v-model="reply.button_body" v-if="reply.reply_type == 'button'" rows="3"/>
+                  <textarea class="form-control" v-model="reply.button_body" rows="3" :readonly="true" v-else />
+                </div>
+              </div>
             </div>
             <div class="col-md-9" v-else>
-              <div class="col-md-12">
-                <input type="text" class="form-control" id="exampleFormControlInput1" placeholder="header" v-model="reply.url_header_text"/>
+              <div class="mb-3 row">
+                <label for="inputEmail3" class="col-sm-2 col-form-label">Header</label>
+                <div class="col-sm-10">
+                  <input type="text" class="form-control" id="exampleFormControlInput1" placeholder="header" v-model="reply.url_header_text"/>
+                </div>
               </div>
-              <div class="col-md-12" style="margin-top:10px;">
-                <input type="text" class="form-control" id="exampleFormControlInput1" placeholder="body" v-model="reply.url_body_text"/>
+              <div class="mb-3 row">
+                <label for="inputEmail3" class="col-sm-2 col-form-label">Body</label>
+                <div class="col-sm-10">
+                  <input type="text" class="form-control" id="exampleFormControlInput1" placeholder="header" v-model="reply.url_body_text"/>
+                </div>
               </div>
-              <div class="col-md-12" style="margin-top:10px;">
-                <input type="text" class="form-control" id="exampleFormControlInput1" placeholder="footer" v-model="reply.url_footer_text"/>
+              <div class="mb-3 row">
+                <label for="inputEmail3" class="col-sm-2 col-form-label">Footer</label>
+                <div class="col-sm-10">
+                  <input type="text" class="form-control" id="exampleFormControlInput1" placeholder="header" v-model="reply.url_footer_text"/>
+                </div>
               </div>
-              <div class="col-md-12" style="margin-top:10px;">
-                <input type="text" class="form-control" id="exampleFormControlInput1" placeholder="text" v-model="reply.url_button_text"/>
+              <div class="mb-3 row">
+                <label for="inputEmail3" class="col-sm-2 col-form-label">Button Text</label>
+                <div class="col-sm-10">
+                  <input type="text" class="form-control" id="exampleFormControlInput1" placeholder="header" v-model="reply.url_button_text"/>
+                </div>
               </div>
-              <div class="col-md-12" style="margin-top:10px;">
-                <input type="text" class="form-control" id="exampleFormControlInput1" placeholder="url" v-model="reply.url"/>
+              <div class="mb-3 row">
+                <label for="inputEmail3" class="col-sm-2 col-form-label">Url</label>
+                <div class="col-sm-10">
+                  <input type="text" class="form-control" id="exampleFormControlInput1" placeholder="header" v-model="reply.url"/>
+                </div>
               </div>
             </div>
             <div class="col-md-3">
@@ -659,10 +730,10 @@ checkWaba()
               <button type="button" @click="viewButtons(reply.buttons)" class="btn btn-default me-2" data-bs-toggle="modal" data-bs-target="#buttons" v-if="reply.reply_type == 'button'">View</button>
             </div>
             <div class="col-md-4">
-              <button type="button" @click="editReplyMessage(reply)" class="btn btn-default me-2">Edit</button>
+              <button type="button" @click="editReplyMessage(reply)" class="btn btn-warning me-2">Edit</button>
             </div>
             <div class="col-md-4">
-              <button type="button" @click="selectReplyMessage(reply.id)" class="btn btn-default me-2" data-bs-toggle="modal" data-bs-target="#modalLg">delete</button>
+              <button type="button" @click="selectReplyMessage(reply.id)" class="btn btn-danger me-2" data-bs-toggle="modal" data-bs-target="#modalLg">Delete</button>
             </div>
           </div>
         </div>
@@ -671,31 +742,46 @@ checkWaba()
           <div class="row" style="margin-top:10px;">
             <div class="col-md-3">
               <div class="row">
-                <div class="col-md-4">
+                <div class="col-md-2">
                   <label for="formControlRange">{{index + 2}}</label>
                 </div>
-                <div class="col-md-4">
+                <div class="col-md-7">
                   <input type="text" class="form-control" id="exampleFormControlInput1" v-model="child.key"/>
                 </div>
-                <div class="col-md-4">
-                  <input type="text" class="form-control" id="exampleFormControlInput1" v-model="child.sequence"/>
+                <div class="col-md-3">
+                  <input type="number" class="form-control" id="exampleFormControlInput1" v-model="child.sequence"/>
                 </div>
               </div>
             </div>
             <div class="col-md-5">
               <div class="row">
                 <div class="col-md-9" v-if="child.reply_type == 'flow'">
-                  <select class="form-select" id="exampleFormControlSelect2" v-model="child.flow_id">
-                    <option v-for="item in flows" :key="item.value" :value="item.value">{{item.label}}</option>
-                  </select>
+                  <div class="mb-3 row">
+                    <label for="inputEmail3" class="col-sm-2 col-form-label"></label>
+                    <div class="col-sm-10">
+                      <select class="form-select" id="exampleFormControlSelect2" v-model="child.flow_id">
+                        <option v-for="item in flows" :key="item.value" :value="item.value">{{item.label}}</option>
+                      </select>
+                    </div>
+                  </div>
                 </div>
                 <div class="col-md-9" v-else-if="child.reply_type == 'text_message'">
-                  <textarea class="form-control" v-model="child.message" v-if="child.reply_type == 'text_message'" rows="3"/>
-                  <textarea class="form-control" v-model="child.message" :readonly="true" v-else rows="3"/>
+                  <div class="mb-3 row">
+                    <label for="inputEmail3" class="col-sm-2 col-form-label">Message</label>
+                    <div class="col-sm-10">
+                      <textarea class="form-control" v-model="child.message" v-if="child.reply_type == 'text_message'" rows="3"/>
+                      <textarea class="form-control" v-model="child.message" :readonly="true" v-else rows="3"/>
+                    </div>
+                  </div>
                 </div>
                 <div class="col-md-9" v-else-if="child.reply_type == 'button'">
-                  <textarea class="form-control" v-model="child.button_body" v-if="child.reply_type == 'button'" rows="3"/>
-                  <textarea class="form-control" v-model="child.button_body" rows="3" :readonly="true" v-else />
+                  <div class="mb-3 row">
+                    <label for="inputEmail3" class="col-sm-2 col-form-label">Button Text</label>
+                    <div class="col-sm-10">
+                      <textarea class="form-control" v-model="child.button_body" v-if="child.reply_type == 'button'" rows="3"/>
+                      <textarea class="form-control" v-model="child.button_body" rows="3" :readonly="true" v-else />
+                    </div>
+                  </div>
                 </div>
                 <div class="col-md-9" v-else>
                   <div class="col-md-12">
@@ -722,13 +808,13 @@ checkWaba()
             <div class="col-md-4">
               <div class="row">
                 <div class="col-md-4">
-                  <button type="button" @click="viewButtons(child.buttons)" class="btn btn-default me-2" data-bs-toggle="modal" data-bs-target="#buttons" v-if="child.reply_type == 'button'">View</button>
+                  <button type="button" @click="viewButtons(child.buttons)" class="btn btn-primary me-2" data-bs-toggle="modal" data-bs-target="#buttons" v-if="child.reply_type == 'button'">View</button>
                 </div>
                 <div class="col-md-4">
-                  <button type="button" @click="editReplyMessage(child)" class="btn btn-default me-2">Edit</button>
+                  <button type="button" @click="editReplyMessage(child)" class="btn btn-warning me-2">Edit</button>
                 </div>
                 <div class="col-md-4">
-                  <button type="button" @click="selectReplyMessage(child.id)" class="btn btn-default me-2" data-bs-toggle="modal" data-bs-target="#modalLg">delete</button>
+                  <button type="button" @click="selectReplyMessage(child.id)" class="btn btn-danger me-2" data-bs-toggle="modal" data-bs-target="#modalLg">delete</button>
                 </div>
               </div>
             </div>
@@ -738,14 +824,6 @@ checkWaba()
 
 
         <hr style="margin-top:10px;">
-      </div>
-    </card-body>
-
-    <card-body class="pb-2" v-if="selected_waba_account">
-      <div class="row">
-        <div class="form-group mb-3">
-          <button type="button" class="btn btn-default me-2" data-bs-toggle="modal" data-bs-target="#modalLg2">Create Auto Reply Message</button>
-        </div>
       </div>
     </card-body>
   </card>

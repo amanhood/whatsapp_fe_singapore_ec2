@@ -1,3 +1,4 @@
+
 <script setup>
 import { useUserSessionStore } from '@/stores/user-session';
 import { ref } from 'vue'
@@ -60,6 +61,11 @@ let update_options = [
   {value:'true',label:'true'},
   {value:'false',label:'false'}
 ]
+let is_cart_enabled = ref(null)
+let is_catalog_visible = ref(null)
+let catalog_link = ref(null)
+let products = []
+let is_product_show = ref(false)
 
 token = sessionStorage.getItem("token")
 username = sessionStorage.getItem("username")
@@ -69,10 +75,10 @@ async function checkWaba(){
   whatsapp_accounts.value = data['data']['whatsapp_accounts']
 }
 
-async function selectWaBa(waba_id,phone_number_id){
+async function selectWaBa(waba_id,phone_number_id,phone_number){
   selected_waba_account.value = waba_id
   selected_phone_number_id.value = phone_number_id
-  get_business_account()
+  get_business_account(phone_number)
 }
 
 
@@ -98,7 +104,7 @@ async function addBusinessAccount(){
   }
 }
 
-async function get_business_account(){
+async function get_business_account(phone_number){
 	let payload = {}
 	payload['waba_id'] = selected_waba_account.value
 	payload['phone_number_id'] = selected_phone_number_id.value
@@ -115,6 +121,9 @@ async function get_business_account(){
         if(data['data']['business_account_id']){
   				business_account_id.value = data['data']['business_account_id']
   				catalogs.value = data['data']['catalogs']['data']
+          if(catalogs.value.length > 0){
+            catalog_link.value = "https://wa.me/c/" + phone_number.replace(/[ +]/g, "")
+          }
   			}
 			}
 		}
@@ -232,6 +241,7 @@ async function uploadFile(){
   formData.append('update_only', update_only.value);
   selected_catalog
   let data = await formdataRequest("batch_import_products",formData,token)
+  console.log(data)
   if(data.request.status == 200){
     if(data['data']['error']){
 			let message = data['data']['error']['message']
@@ -244,6 +254,81 @@ async function uploadFile(){
     console.log(data)
   }
 
+}
+
+async function update_cart_status(status){
+  let payload = {}
+  payload['waba_id'] = selected_waba_account.value
+	payload['phone_number_id'] = selected_phone_number_id.value
+  payload['status'] = status
+  let data = await postRequest("update_cart_status",payload,token)
+	if(data.request.status == 200){
+		if(data['data']['error']){
+			let message = data['data']['error']['message']
+			showToast(message)
+		} else {
+      whatsapp_commerce_setting()
+		}
+  }
+}
+
+async function visible_catalog_icon(status){
+  let payload = {}
+  payload['waba_id'] = selected_waba_account.value
+	payload['phone_number_id'] = selected_phone_number_id.value
+  payload['status'] = status
+  let data = await postRequest("visible_catalog_icon",payload,token)
+	if(data.request.status == 200){
+		if(data['data']['error']){
+			let message = data['data']['error']['message']
+			showToast(message)
+		} else {
+      whatsapp_commerce_setting()
+		}
+  }
+}
+
+async function whatsapp_commerce_setting(){
+  let payload = {}
+  payload['waba_id'] = selected_waba_account.value
+	payload['phone_number_id'] = selected_phone_number_id.value
+  let data = await postRequest("whatsapp_commerce_setting",payload,token)
+	if(data.request.status == 200){
+		if(data['data']['error']){
+			let message = data['data']['error']['message']
+			showToast(message)
+		} else {
+      is_cart_enabled.value = data['data']['data'][0]['is_cart_enabled']
+      is_catalog_visible.value = data['data']['data'][0]['is_catalog_visible']
+		}
+  }
+}
+
+function copyLink(catalog_link){
+  navigator.clipboard.writeText(catalog_link)
+        .then(() => {
+          let message = "link copied to clipboard"
+    			showToast(message)
+        })
+        .catch(err => {
+          let message = "Failed to copy link"
+    			showToast(message)
+        });
+}
+
+async function showProducts(selected_catalog){
+  let payload = {}
+  payload['catalog_id'] = selected_catalog.id
+  payload['waba_id'] = selected_waba_account.value
+	payload['phone_number_id'] = selected_phone_number_id.value
+  let data = await postRequest("show_products",payload,token)
+  if(data.request.status == 200){
+    products.value = data['data']
+    is_product_show.value = true
+    console.log(products.value)
+  } else {
+
+	}
 }
 
 
@@ -279,10 +364,10 @@ checkWaba()
       <div class="row" v-if="whatsapp_accounts.length > 0">
         <div class="col-xl-9">
           <div class="form-group mb-3">
-            <div class="flex-fill fw-bold fs-16px">Select business whatsapp account for creating product catalogues</div>
+            <div class="flex-fill fw-bold fs-16px">Select business whatsapp account for managing cart and product catalogues</div>
           </div>
           <div class="form-group mb-3">
-            <button type="button" class="btn btn-outline-primary mb-1 me-1" @click="selectWaBa(account.waba_id,account.phone_number_id)" v-for="account in whatsapp_accounts">{{account.phone_number}}</button>
+            <button type="button" class="btn btn-outline-primary mb-1 me-1" @click="selectWaBa(account.waba_id,account.phone_number_id,account.phone_number)" v-for="account in whatsapp_accounts">{{account.phone_number}}</button>
           </div>
         </div>
         <hr>
@@ -290,6 +375,31 @@ checkWaba()
     </card-body>
 
     <fragment v-if="selected_waba_account">
+      <card-body class="pb-2">
+          <div class="row">
+            <div class="col-xl-12">
+              <div class="form-group mb-3">
+                <div class="flex-fill fw-bold fs-16px">Cart setting</div>
+              </div>
+            </div>
+            <div class="col-md-12">
+              <div class="row">
+                <div class="col-md-8">
+                  <fragment>
+                    <button type="button" class="btn btn-outline-primary mb-1 me-1" @click="update_cart_status('false')" v-if="is_cart_enabled">unable cart</button>
+                    <button type="button" class="btn btn-outline-primary mb-1 me-1" @click="update_cart_status('true')" v-else>enable cart</button>
+                  </fragment>
+                  <fragment>
+                    <button type="button" class="btn btn-outline-primary mb-1 me-1" @click="visible_catalog_icon('false')" v-if="is_catalog_visible">cart icon invisible</button>
+                    <button type="button" class="btn btn-outline-primary mb-1 me-1" @click="visible_catalog_icon('true')" v-else>cart icon visible</button>
+                  </fragment>
+                  <button type="button" class="btn btn-outline-primary mb-1 me-1" @click="copyLink(catalog_link)">copy {{catalog_link}}</button>
+                </div>
+              </div>
+            </div>
+          </div>
+          <hr>
+      </card-body>
       <card-body class="pb-2" v-if="!business_account_id">
           <div class="row">
             <div class="col-xl-12">
@@ -357,13 +467,42 @@ checkWaba()
           <div class="row" id='margin_10'>
             <div class="col-md-3">
               <div class="row">
-                <div class="col-md-6"><button type="button" class="btn btn-default mb-1 me-1" @click="singleOrMutliple('single')">Single Product</button></div>
-                <div class="col-md-6"><button type="button" class="btn btn-default mb-1 me-1" @click="singleOrMutliple('multiple')">Multiple Products</button></div>
+                <div class="col-md-4"><button type="button" class="btn btn-default mb-1 me-1" @click="showProducts(selected_catalog)">Show products</button></div>
+                <div class="col-md-4"><button type="button" class="btn btn-default mb-1 me-1" @click="singleOrMutliple('single')">Single Product</button></div>
+                <div class="col-md-4"><button type="button" class="btn btn-default mb-1 me-1" @click="singleOrMutliple('multiple')">Multiple Products</button></div>
               </div>
             </div>
           </div>
           <hr>
           </fragment>
+
+          <fragment v-if="selected_catalog && is_product_show ==true">
+            <!-- BEGIN pos-content -->
+            <div class="pos pos-with-menu pos-with-sidebar" v-bind:class="{ 'pos-mobile-sidebar-toggled': mobileSidebarToggled }">
+              <div class="pos-container">
+          			<div class="pos-content">
+          				<div class="pos-content-container h-100">
+          					<div class="row gx-4">
+          						<template v-for="product in products">
+          							<div class="col-xxl-3 col-xl-4 col-lg-6 col-md-4 col-sm-6 pb-4" >
+          								<a href="#" class="pos-product" v-on:click="(event) => showFoodModal(event, product.id)">
+          									<div class="img" v-bind:style="{ backgroundImage: 'url('+ product.image_url +')' }"></div>
+          									<div class="info">
+          										<div class="title">{{ product.name }}</div>
+          										<div class="desc">{{ product.description }}</div>
+          										<div class="price">${{ product.price }}</div>
+          									</div>
+          								</a>
+          							</div>
+          						</template>
+          					</div>
+          				</div>
+          			</div>
+              </div>
+        			<!-- END pos-content -->
+            </div>
+          </fragment>
+
           <fragment v-if="selected_catalog && single_or_multiple =='single'">
             <div class="row" id='margin_10'>
               <div class="col-md-3">
@@ -429,15 +568,15 @@ checkWaba()
           </fragment>
           <fragment v-if="selected_catalog && single_or_multiple =='multiple'">
           <div class="row" id='margin_10'>
-            <div class="col-md-6">
+            <div class="col-md-8">
               <div class="row" style="margin-bottom:10px;">
                 <a href="/sample_template.csv">Download a template for batch importing products</a>
               </div>
               <div class="row" style="margin-bottom:10px;padding-left:10px;">
-                Please select "false" if items at uplaoding csv is all items you wish to upload to Facebook product catalog. The existing items at catalog will be "DELETED" if they are not existed at csv file.
+                When set to false, the feed is treated as a replace feed. That means with every new incoming update, if we do not find the set of items created previously, they will be deleted.
               </div>
               <div class="row" style="margin-bottom:10px;padding-left:10px;">
-                Please select "true" if you want to add new items and edit values of existing items.
+                When set to true, we create new items and update existing ones, but don't delete items from the feed. You only need to provide ID to update existing items. This reduces time to fetch and process your file.
               </div>
               <div class="row" style="margin-bottom:10px;">
                 <div class="col-md-3">

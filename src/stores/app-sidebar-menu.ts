@@ -31,11 +31,6 @@ export const useAppSidebarMenuStore = defineStore({
   			is_header: true
   		},
       {
-  			url: '/page/catalog',
-  			icon: 'fa fa-globe',
-  			text: 'Whatsapp Cart Setting'
-  		},
-      {
   			url: '/page/product_catalogs',
   			icon: 'fa fa-globe',
   			text: 'Product Catalogs Setup'
@@ -48,28 +43,28 @@ export const useAppSidebarMenuStore = defineStore({
       {
         is_divider: true
       },
-      {
-  			text: 'Business Strategy (Business to Business)',
-  			is_header: true
-  		},
-      {
-  			url: '/page/merchant-search',
-  			icon: 'fa fa-globe',
-  			text: 'Get Opponents / Partners'
-  		},
-      {
-  			url: '/page/crawler_request',
-  			icon: 'fa fa-globe',
-  			text: 'Data scraping request'
-  		},
+      // {
+  		// 	text: 'Business Strategy (Business to Business)',
+  		// 	is_header: true
+  		// },
+      // {
+  		// 	url: '/page/merchant-search',
+  		// 	icon: 'fa fa-globe',
+  		// 	text: 'Get Opponents / Partners'
+  		// },
+      // {
+  		// 	url: '/page/crawler_request',
+  		// 	icon: 'fa fa-globe',
+  		// 	text: 'Data scraping request'
+  		// },
       // {
   		// 	url: '/page/business_help',
   		// 	icon: 'fa fa-globe',
   		// 	text: 'Business Help'
   		// },
-      {
-        is_divider: true
-      },
+      // {
+      //   is_divider: true
+      // },
       // {
   		// 	text: 'AI Help (ChatGPT)',
   		// 	is_header: true

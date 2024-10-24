@@ -4,7 +4,6 @@ const router = createRouter({
   history: createWebHistory(import.meta.env.BASE_URL),
   routes: [
     { path: '/page/auto_reply_setting', component: () => import('../views/AutoReplySetting.vue') },
-    { path: '/page/catalog', component: () => import('../views/Catalog.vue') },
     { path: '/qfpay_confirmation', component: () => import('../views/PaymentConfirmation.vue') },
     { path: '/page/login', component: () => import('../views/PageLogin.vue') },
 		{ path: '/page/register', component: () => import('../views/PageRegister.vue') },
@@ -22,6 +21,10 @@ const router = createRouter({
     { path: '/page/update_flow', component: () => import('../views/UpdateFlow.vue') },
     { path: '/page/flows', component: () => import('../views/Flows.vue') },
     { path: '/page/product_catalogs', component: () => import('../views/ProductCatalogs.vue') },
+    { path: '/page/connect_whatsapp', component: () => import('../views/ConnectWhatsapp.vue') },
+    { path: '/page/marketing_templates', component: () => import('../views/MarketingTemplates.vue') },
+    { path: '/page/create-marketing-template', component: () => import('../views/CreateMarketingTemplate.vue') },
+    { path: '/page/send-message-template', component: () => import('../views/SendMessageTemplate.vue') },
     { path: '/', component: () => import('../views/PageLogin.vue') },
     { path: '/test', component: () => import('../views/FbLogin.vue') },
 		{ path: '/analytics', component: () => import('../views/Analytics.vue') },

@@ -123,7 +123,7 @@ getAddress()
         <div class="col-md-12">
           <div class="row">
             <div class="col-md-3">
-              <button type="button" class="btn btn-default mb-1 me-1" @click="submit">Submit</button>
+              <button type="button" class="btn btn-teal mb-1 me-1" @click="submit">Submit</button>
             </div>
           </div>
         </div>

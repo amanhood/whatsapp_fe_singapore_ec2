@@ -27,7 +27,7 @@ export default {
 		appOption.appHeaderHide = true;
 		appOption.appContentClass = 'p-0';
 		appOption.appContentFullHeight = true;
-		
+
 		axios.get('/assets/data/pos/customer-order.json').then((response) => {
 			this.menu = response.data;
 			this.order = response.data.order;
@@ -79,7 +79,7 @@ export default {
 			for (var i = 0; i < this.order.length; i++) {
 				if (this.order[i].id == id) {
 					var newQty = parseInt(this.order[i].quantity) - 1;
-					
+
 					if (newQty < 1) {
 						newQty = 1;
 					}
@@ -89,18 +89,18 @@ export default {
 		},
 		addQty: function(event, id) {
 			event.preventDefault();
-			
+
 			for (var i = 0; i < this.order.length; i++) {
 				if (this.order[i].id == id) {
 					var newQty = parseInt(this.order[i].quantity) + 1;
-					
+
 					this.order[i].quantity = newQty;
 				}
 			}
 		},
 		showType: function(event, type) {
 			event.preventDefault();
-			
+
 			for (var i = 0; i < this.menu.category.length; i++) {
 				if (this.menu.category[i].type == type) {
 					this.menu.category[i].active = true;
@@ -118,7 +118,7 @@ export default {
 		},
 		showFoodModal: function(event, id) {
 			event.preventDefault();
-			
+
 			for (var i = 0; i < this.menu.food.length; i++) {
 				if (this.menu.food[i].id == id) {
 					this.modalData = this.menu.food[i];
@@ -134,14 +134,14 @@ export default {
 		},
 		addModalQty: function(event) {
 			event.preventDefault();
-			
+
 			this.modalQuantity = this.modalQuantity + 1;
 		},
 		deductModalQty: function(event) {
 			event.preventDefault();
-			
+
 			var newQty = parseInt(this.modalQuantity) - 1;
-		
+
 			if (newQty < 1) {
 				newQty = 1;
 			}
@@ -149,9 +149,9 @@ export default {
 		},
 		addToCart: function(event) {
 			event.preventDefault();
-			
+
 			this.modal.hide();
-			
+
 			var options = [];
 			var extraPrice = 0;
 			if (this.modalSelectedSize) {
@@ -170,7 +170,7 @@ export default {
 					options.push(option);
 				}
 			}
-			
+
 			this.order.push({
 				"id": (this.order.length + 1),
 				"image": this.modalData.image,
@@ -179,7 +179,7 @@ export default {
 				"quantity": this.modalQuantity,
 				"options": options
 			});
-			
+
 			setTimeout(() => {
 				this.$refs.posSidebarBody.$el.scrollTop = 9999;
 				this.$refs.posSidebarBody.ps.update();
@@ -187,7 +187,7 @@ export default {
 		},
 		toggleConfirmation: function(event, id, value) {
 			event.preventDefault();
-			
+
 			for (var i = 0; i < this.order.length; i++) {
 				if (this.order[i].id == id) {
 					this.order[i].confirmation = value;
@@ -196,7 +196,7 @@ export default {
 		},
 		removeOrder: function(event, id) {
 			event.preventDefault();
-			
+
 			for (var i = 0; i < this.order.length; i++) {
 				if (this.order[i].id == id) {
 					this.order.splice(i, 1);
@@ -259,7 +259,7 @@ export default {
 				</div>
 			</div>
 			<!-- END pos-content -->
-		
+
 			<!-- BEGIN pos-sidebar -->
 			<div class="pos-sidebar">
 				<div class="h-100 d-flex flex-column p-0">
@@ -275,7 +275,7 @@ export default {
 						<div class="order">Order: <b>{{ orderNo }}</b></div>
 					</div>
 					<!-- END pos-sidebar-header -->
-				
+
 					<!-- BEGIN pos-sidebar-nav -->
 					<div class="pos-sidebar-nav">
 						<ul class="nav nav-tabs nav-fill">
@@ -288,7 +288,7 @@ export default {
 						</ul>
 					</div>
 					<!-- END pos-sidebar-nav -->
-				
+
 					<!-- BEGIN pos-sidebar-body -->
 					<perfect-scrollbar ref="posSidebarBody" class="pos-sidebar-body tab-content">
 						<!-- BEGIN #newOrderTab -->
@@ -314,7 +314,7 @@ export default {
 									<div>${{ (order.price * order.quantity).toFixed(2) }}</div>
 									<div class="text-end mt-auto"><a href="#" v-on:click="(event) => toggleConfirmation(event, order.id, true)" class="btn btn-default btn-sm"><i class="fa fa-trash"></i></a></div>
 								</div>
-								
+
 								<div class="pos-order-confirmation text-center d-flex flex-column justify-content-center" v-if="order.confirmation">
 									<div class="mb-1">
 										<i class="fa fa-trash fs-36px lh-1"></i>
@@ -337,7 +337,7 @@ export default {
 							</div>
 						</div>
 						<!-- END #orderHistoryTab -->
-					
+
 						<!-- BEGIN #orderHistoryTab -->
 						<div class="tab-pane fade h-100" id="orderHistoryTab">
 							<div class="h-100 d-flex align-items-center justify-content-center text-center p-20">
@@ -352,7 +352,7 @@ export default {
 						<!-- END #orderHistoryTab -->
 					</perfect-scrollbar>
 					<!-- END pos-sidebar-body -->
-				
+
 					<!-- BEGIN pos-sidebar-footer -->
 					<div class="pos-sidebar-footer">
 						<div class="d-flex align-items-center mb-2">
@@ -398,14 +398,14 @@ export default {
 		</div>
 	</div>
 	<!-- END pos -->
-	
+
 	<!-- BEGIN pos-mobile-sidebar-toggler -->
 	<a href="#" class="pos-mobile-sidebar-toggler" v-on:click="toggleMobileSidebar()">
 		<i class="bi bi-bag"></i>
 		<span class="badge">{{ getOrderTotal() }}</span>
 	</a>
 	<!-- END pos-mobile-sidebar-toggler -->
-	
+
 	<div class="modal modal-pos fade" ref="modalPosItem">
 		<div class="modal-dialog modal-lg">
 			<div class="modal-content border-0">

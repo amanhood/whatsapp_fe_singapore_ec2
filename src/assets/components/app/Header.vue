@@ -56,10 +56,6 @@ username = sessionStorage.getItem("username")
 		<!-- BEGIN menu -->
 		<div class="menu">
 			<form class="menu-search" name="header_search_form" v-on:submit="checkForm">
-				<div class="menu-search-icon"><i class="fa fa-search"></i></div>
-				<div class="menu-search-input">
-					<input type="text" class="form-control" placeholder="Search menu...">
-				</div>
 			</form>
 
 			<div class="menu-item dropdown">
@@ -67,8 +63,7 @@ username = sessionStorage.getItem("username")
 					<div class="menu-text">{{username}}</div>
 				</a>
 				<div class="dropdown-menu dropdown-menu-end me-lg-3">
-
-					<RouterLink to="/page/login" class="dropdown-item d-flex align-items-center">Log Out <i class="fa fa-toggle-off fa-fw ms-auto text-gray-400 fs-16px"></i></RouterLink>
+					<RouterLink to="/page/login" class="dropdown-item d-flex align-items-center">Logout</RouterLink>
 				</div>
 			</div>
 		</div>

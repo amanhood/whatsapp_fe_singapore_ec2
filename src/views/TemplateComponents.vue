@@ -10,7 +10,6 @@ import readXlsxFile from 'read-excel-file'
 
 const props = defineProps(['component','template_name','template_category','waba_id','phone_number_id'])
 
-console.log(props)
 
 let customImageMaxSize = ref(3)
 let uploaded_file = ref(null)
@@ -18,41 +17,19 @@ let file_name = ref(null)
 let file_length = ref(null)
 let file_type = ref(null)
 let header_text = ref('')
-let body_text = ref('')
-let body_text_message = ref(null)
-let body_variables = []
+let body_variables = ref([])
 let limited_time_offer_text = ref(null)
 let offer_code = ref(null)
-let coupon_code_error_message = ref(null)
-let url_variable = ref('')
-let url_variable_message = ref(null)
-let url_variables = []
+let url_variables = ref([])
 let recipient = ref(null)
 let token = ref(null)
 let contacts = ref([])
 
+console.log(props.waba_id)
 
 token = sessionStorage.getItem("token")
 const emit = defineEmits(["showtoast"])
 
-watch(body_text,(newValue,oldValue)=>{
-    if(body_text.value.includes(",")){
-      body_variables = []
-      body_text_message.value = null
-      body_variables = body_text.value.split(",")
-      body_text_message.value = body_variables.length + " variables are inputted"
-    } else {
-      if(body_text.value == ""){
-        body_variables = []
-        body_text_message.value = "Empty"
-      } else {
-        body_variables = []
-        body_variables.push(body_text.value)
-        body_text_message.value = body_text.value + " is value of variable 1"
-      }
-      //console.log(body_text_message)
-    }
-})
 
 function getDateTime(){
   limited_time_offer_text.value = Date.parse(limited_time_offer_text.value)
@@ -66,23 +43,11 @@ function timeConverter(epoch){
 function restrictSpecialChars() {
   let badchrs = /[$%\^]/;
   if(badchrs.test(offer_code.value)) {
-    coupon_code_error_message.value = "you can't use $ or % or ^"
-  } else {
-    coupon_code_error_message.value = null
+    let message = "$ or % or ^ are not allowed to use"
+    emit('showtoast',message)
   }
 }
 
-watch(url_variable,(newValue,oldValue)=>{
-  if(url_variable.value.includes(",")){
-    url_variable.value = ''
-    url_variable_message.value = "only 1 variable is available, no "," is allowed"
-  } else {
-    url_variables = []
-    url_variables.push(url_variable.value)
-    url_variable_message.value = url_variable.value + " is value of variable 1"
-    //console.log(body_text_message)
-  }
-})
 
 async function uploadFile(event) {
   try {
@@ -114,10 +79,20 @@ async function preview(){
     payload['file_name'] = file_name.value
     payload['file_type'] = file_type.value
     payload['header_text'] = header_text.value
-    payload['body_variables'] = body_variables
+    let variables = body_variables.value.length > 0
+    ? body_variables.value
+        .map(item => item.value)
+        .filter(value => value !== null && value !== undefined) // filter out null or undefined
+    : [];
+    payload['body_variables'] = variables
     payload['limited_time_offer'] = limited_time_offer_text.value
     payload['offer_code'] = offer_code.value
-    payload['url_variables'] = url_variables
+    let link_variables = body_variables.value.length > 0
+    ? url_variables.value
+        .map(item => item.value)
+        .filter(value => value !== null && value !== undefined) // filter out null or undefined
+    : [];
+    payload['url_variables'] = link_variables
     payload['recipient'] = recipient.value
     payload['components'] = props.component
     payload['template_name'] = props.template_name
@@ -129,7 +104,7 @@ async function preview(){
       console.log(data)
     }
   } else {
-    let notification_message = "No Recipient is input"
+    let notification_message = "No Recipient"
     emit('showtoast',notification_message)
   }
 }
@@ -152,10 +127,19 @@ function bulk_send(){
     payload['file_name'] = file_name.value
     payload['file_type'] = file_type.value
     payload['header_text'] = header_text.value
-    payload['body_variables'] = body_variables
+    if (body_variables.value.length > 0){
+      let variables = body_variables.value.map(item => item.value);
+      payload['body_variables'] = variables
+    } else {
+      payload['body_variables'] = body_variables.value
+    }
+
     payload['limited_time_offer'] = limited_time_offer_text.value
     payload['offer_code'] = offer_code.value
-    payload['url_variables'] = url_variables
+    if(url_variables.value.length > 0){
+      let variables = url_variables.value.map(item => item.value);
+      payload['url_variables'] = variables
+    }
     payload['components'] = props.component
     payload['template_name'] = props.template_name
 
@@ -186,7 +170,7 @@ function getComponentName(item){
   } else if (item == 'BODY') {
     return "Body";
   } else if (item == 'LIMITED_TIME_OFFER'){
-    return "Expiry time of offer"
+    return "Expiry date and time of special offer"
   } else if (item == 'FOOTER'){
     return "Footer";
   } else if (item == 'BUTTONS'){
@@ -201,6 +185,27 @@ function uploadExcel(event) {
   })
 }
 
+function updateBodyVariables(){
+  props.component.forEach((item, i) => {
+    if(item.type == 'BODY'){
+      if(item.example){
+        item.example.body_text[0].forEach((bt, i) => {
+          body_variables.value.push({'value':null})
+        });
+      }
+    } else if(item.type == 'BUTTONS'){
+      item.buttons.forEach((button, i) => {
+        if(button.type == 'URL' && button.example){
+          url_variables.value.push({'value':null})
+        }
+      });
+
+    }
+  });
+}
+updateBodyVariables()
+
+
 </script>
 
 <style>
@@ -209,243 +214,343 @@ function uploadExcel(event) {
 }
 </style>
 
+
+
 <template>
   <card-body v-for="tc in props.component">
     <div class="row" id="row_margin">
       <div class="flex-fill fw-bold fs-16px">{{getComponentName(tc.type)}}</div>
     </div>
     <template v-if="tc.type == 'HEADER'">
-      <div class="row" v-if="tc.format == 'IMAGE' && tc.example">
-        <div class="col-md-6">
-          <img :src="tc.example.header_handle[0]" style="width:100%">
+      <fragment v-if="tc.format == 'IMAGE' && tc.example">
+        <div class="row">
+          <div class="col-md-6" style="margin-top:10px;">
+            <img :src="tc.example.header_handle[0]" style="width:30%">
+          </div>
         </div>
-        <div class="col-md-6">
-          <label class="form-label" for="defaultFile">Photo change:</label>
-          <input type="file" class="form-control" id="defaultFile" @change="uploadFile" accept="image/*"/>
+        <div class="row" style="margin-top:20px;">
+          <div class="col-6">
+            <card>
+              <card-body style="background-color:#ffffe0;">
+                <p class="card-text">If you want to change the default header image, please upload</p>
+                <input type="file" class="form-control" id="defaultFile" @change="uploadFile" accept="image/*"/>
+              </card-body>
+            </card>
+          </div>
         </div>
-      </div>
-      <div class="row" v-if="tc.format == 'DOCUMENT' && tc.example">
-        <div class="col-md-6">
-          <label class="form-label" for="defaultFile"><a :href="tc.example.header_handle[0]" target="_blank">View original document</a></label>
-          <input type="file" class="form-control" id="defaultFile" @change="uploadFile" accept="application/pdf"/>
+      </fragment>
+
+      <fragment v-if="tc.format == 'DOCUMENT' && tc.example">
+        <div class="row">
+          <div class="col-md-6" style="margin-top:10px;">
+            <label class="form-label" for="defaultFile"><a :href="tc.example.header_handle[0]" target="_blank">View original document</a></label>
+          </div>
         </div>
-      </div>
-      <div class="row" v-if="tc.format == 'TEXT'">
-        <div class="col-md-4">
-          <input type="text" class="form-control" readonly :value="tc.text"/>
+        <div class="row" style="margin-top:20px;">
+          <div class="col-6">
+            <card>
+              <card-body style="background-color:#ffffe0;">
+                <p class="card-text">If you want to change the default document, please upload</p>
+                <input type="file" class="form-control" id="defaultFile" @change="uploadFile" accept="application/pdf"/>
+              </card-body>
+            </card>
+          </div>
         </div>
-        <div class="col-md-4">
-          <input type="text" class="form-control" readonly :value="tc.example.header_text[0]"/>
+      </fragment>
+
+      <fragment v-if="tc.format == 'TEXT'">
+        <div class="row">
+          <div class="row" style="margin-top:10px;">
+            <div class="col-6">
+              <card>
+                <card-body style="border:1px solid #C5C5C5;">
+                  <p class="card-text">{{tc.text}}</p>
+                </card-body>
+              </card>
+            </div>
+          </div>
+          <div class="row" style="margin-top:10px;">
+            <div class="col-6">
+              <card>
+                <card-body style="border:1px solid #C5C5C5;background-color:#ffffe0;">
+                    <p class="card-text">Variable: {{tc.example.header_text[0]}}</p>
+                    <p class="card-text">You could input text to replace "{{tc.example.header_text[0]}}"</p>
+                    <input type="text" class="form-control" v-model="header_text"/>
+                </card-body>
+              </card>
+            </div>
+          </div>
         </div>
-        <div class="col-md-4">
-          <input type="text" class="form-control" placeholder="1 variable is allowed" v-model="header_text"/>
-        </div>
-      </div>
+      </fragment>
     </template>
+
     <template v-if="tc.type == 'BODY'">
-      <div class="row" v-if="tc.example">
-        <div class="col-md-4">
-          <textarea class="form-control" readonly :value="tc.text" rows="3"/>
-        </div>
-        <div class="col-md-4">
-          <input type="text" class="form-control" readonly :value="tc.example.body_text[0]"/>
-        </div>
-        <div class="col-md-4">
-          <input type="text" class="form-control" placeholder="must use , to seperate keywords" v-model="body_text"/>
-        </div>
-      </div>
-      <div class="row" v-else>
-        <div class="col-md-4">
-          {{tc.text}}
-        </div>
-      </div>
-      <div v-if="body_text_message" style="color:red;">
-        {{body_text_message}}
+      <div class="row">
+          <div class="row">
+            <div class="col-6">
+              <card>
+                <card-body style="border:1px solid #C5C5C5;">
+                  <p class="card-text">{{tc.text}}</p>
+                </card-body>
+              </card>
+            </div>
+          </div>
+          <div class="row" style="margin-top:10px;" v-if="tc.example">
+            <div class="col-6">
+              <card>
+                <card-body style="border:1px solid #C5C5C5;background-color:#ffffe0;">
+                    <p class="card-text">Variable(s): {{tc.example.body_text[0].join(", ")}}</p>
+                    <p class="card-text">you could replace the above {{tc.example.body_text[0].length}} variable(s)</p>
+                    <div class="row" v-for="bv in body_variables">
+                      <div class="col-12" style="margin-top:10px;">
+                        <input type="text" class="form-control" v-model="bv.value"/>
+                      </div>
+                    </div>
+                </card-body>
+              </card>
+            </div>
+          </div>
       </div>
     </template>
+
     <template v-if="tc.type == 'LIMITED_TIME_OFFER'">
       <div class="row">
-        <div class="col-md-4">
-          <input type="text" class="form-control" readonly :value="timeConverter(tc.limited_time_offer.text)"/>
-        </div>
-        <div class="col-md-4">
-          <datepicker v-model="limited_time_offer_text" @update:model-value="getDateTime"/>
-        </div>
+          <div class="row">
+            <div class="col-6">
+              <card>
+                <card-body style="border:1px solid #C5C5C5;">
+                  <p class="card-text">{{timeConverter(tc.limited_time_offer.text)}}</p>
+                </card-body>
+              </card>
+            </div>
+          </div>
+          <div class="row" style="margin-top:10px;">
+            <div class="col-6">
+              <card>
+                <card-body style="border:1px solid #C5C5C5;background-color:#ffffe0;">
+                    <p class="card-text">You could change the expiry date and time of special offer</p>
+                    <div class="row">
+                      <div class="col-12" style="margin-top:10px;">
+                        <datepicker v-model="limited_time_offer_text" @update:model-value="getDateTime"/>
+                      </div>
+                    </div>
+                </card-body>
+              </card>
+            </div>
+          </div>
       </div>
     </template>
+
     <template v-if="tc.type == 'FOOTER'">
       <div class="row">
-        <div class="col-md-4">
-          <input type="text" class="form-control" readonly :value="tc.text"/>
-        </div>
+          <div class="row">
+            <div class="col-6">
+              <card>
+                <card-body style="border:1px solid #C5C5C5;">
+                  <p class="card-text">{{tc.text}}</p>
+                </card-body>
+              </card>
+            </div>
+          </div>
       </div>
     </template>
+
     <template v-if="tc.type == 'BUTTONS'">
       <div class="row" v-for="button in tc.buttons">
         <template v-if="button.type == 'COPY_CODE'">
-          <div class="row" id="row_margin">
-              <div class="col-md-2">
-                <div class="row">
-                  <div class="col-md-12">
-                    Coupon Code Button
-                  </div>
-                </div>
-              </div>
-              <div class="col-md-10">
-                <div class="row">
-                  <div class="col-md-4">
-                    <input type="text" class="form-control" readonly :value="button.text"/>
-                  </div>
-                  <div class="col-md-4">
-                    <input type="text" class="form-control" readonly :value="button.example[0]"/>
-                  </div>
-                  <div class="col-md-4">
-                    <input type="text" class="form-control" placeholder="you can change offer code here" v-model="offer_code" @keyup="restrictSpecialChars"/>
-                  </div>
+          <div class="row">
+              <div class="row">
+                <div class="col-6">
+                  <card>
+                    <card-body style="border:1px solid #C5C5C5;">
+                      <div class="row">
+                        <div class="col-6" style="margin-top:10px;">
+                          Coupon Button: {{button.text}}
+                        </div>
+                      </div>
+                      <div class="row">
+                        <div class="col-6" style="margin-top:10px;">
+                          Offer Code: {{button.example[0]}}
+                        </div>
+                      </div>
+                    </card-body>
+                  </card>
                 </div>
               </div>
           </div>
-          <div v-if="coupon_code_error_message" style="color:red;">
-            {{coupon_code_error_message}}
+          <div class="row" style="margin-top:10px;margin-bottom:10px;">
+            <div class="col-6">
+              <card>
+                <card-body style="border:1px solid #C5C5C5;background-color:#ffffe0;">
+                    <p class="card-text">You could change the offer code</p>
+                    <div class="row">
+                      <div class="col-12" style="margin-top:10px;">
+                        <input type="text" class="form-control" placeholder="" v-model="offer_code" @keyup="restrictSpecialChars"/>
+                      </div>
+                    </div>
+                </card-body>
+              </card>
+            </div>
           </div>
           <hr>
         </template>
+
         <template v-if="button.type == 'URL'">
-          <div class="row" id="row_margin">
-              <div class="col-md-2">
-                <div class="row">
-                  <div class="col-md-12">
-                    Website Link Button
-                  </div>
-                </div>
-              </div>
-              <div class="col-md-10">
-                <div class="row" v-if="button.example">
-                  <div class="col-md-3">
-                    <input type="text" class="form-control" readonly :value="button.text"/>
-                  </div>
-                  <div class="col-md-3">
-                    <input type="text" class="form-control" readonly :value="button.url"/>
-                  </div>
-                  <div class="col-md-3">
-                    <input type="text" class="form-control" readonly :value="button.example[0]"/>
-                  </div>
-                  <div class="col-md-3">
-                    <input type="text" class="form-control" placeholder="change variable" v-model="url_variable"/>
-                  </div>
-                </div>
-                <div class="row" v-else>
-                  <div class="col-md-4">
-                    <input type="text" class="form-control" readonly :value="button.text"/>
-                  </div>
-                  <div class="col-md-4">
-                    <input type="text" class="form-control" readonly :value="button.url"/>
-                  </div>
+          <div class="row">
+              <div class="row">
+                <div class="col-6">
+                  <card>
+                    <card-body style="border:1px solid #C5C5C5;">
+                      <div class="row">
+                        <div class="col-6" style="margin-top:10px;">
+                          Website Button: {{button.text}}
+                        </div>
+                      </div>
+                      <div class="row">
+                        <div class="col-12" style="margin-top:10px;">
+                          Url: {{button.url}}
+                        </div>
+                      </div>
+                      <div class="row" v-if="button.example">
+                        <div class="col-6" style="margin-top:10px;">
+                          Variable: {{button.example[0]}}
+                        </div>
+                      </div>
+                    </card-body>
+                  </card>
                 </div>
               </div>
           </div>
-          <div v-if="url_variable_message">
-            {{url_variable_message}}
-          </div>
-        </template>
-        <template v-if="button.type == 'PHONE_NUMBER'">
-          <div class="row" id="row_margin">
-            <div class="col-md-2">
-              <div class="row">
-                <div class="col-md-12">
-                  Phone Call Button
-                </div>
-              </div>
-            </div>
-            <div class="col-md-10">
-              <div class="row">
-                <div class="col-md-4">
-                  <input type="text" class="form-control" readonly :value="button.text"/>
-                </div>
-                <div class="col-md-4">
-                  <input type="text" class="form-control" readonly :value="button.phone_number"/>
-                </div>
-              </div>
+          <div class="row" style="margin-top:10px;" v-if="url_variables.length > 0">
+            <div class="col-6">
+              <card>
+                <card-body style="border:1px solid #C5C5C5;background-color:#ffffe0;">
+                    <p class="card-text">You could change the variable</p>
+                    <div class="row">
+                      <div class="col-12" style="margin-top:10px;" v-for="uv in url_variables">
+                        <input type="text" class="form-control" placeholder="" v-model="uv.value"/>
+                      </div>
+                    </div>
+                </card-body>
+              </card>
             </div>
           </div>
-        </template>
-        <template v-if="button.type == 'QUICK_REPLY'">
-          <div class="row" id="row_margin">
-            <div class="col-md-2">
-              <div class="row">
-                <div class="col-md-12">
-                  Quick Reply Button
-                </div>
-              </div>
-            </div>
-            <div class="col-md-10">
-              <div class="row">
-                <div class="col-md-4">
-                  <input type="text" class="form-control" readonly :value="button.text"/>
-                </div>
-              </div>
-            </div>
-          </div>
-        </template>
-        <template v-if="button.type == 'CATALOG'">
-          <div class="row" id="row_margin">
-            <div class="col-md-12">
-              <div class="row">
-                <div class="col-md-12">
-                  <div class="flex-fill fw-bold fs-16px">Your product catalog of meta is displayed at this whatsapp message</div>
-                </div>
-              </div>
-            </div>
-          </div>
-        </template>
-        <template v-if="button.type == 'FLOW'">
-          <div class="row" id="row_margin">
-            <div class="col-md-12">
-              <div class="row">
-                <div class="col-md-12">
-                  <div class="flex-fill fw-bold fs-16px">Delivery Address Flow</div>
-                </div>
-              </div>
-            </div>
-          </div>
+          <hr style="margin-top:10px;">
         </template>
 
+        <template v-if="button.type == 'PHONE_NUMBER'">
+          <div class="row">
+              <div class="row">
+                <div class="col-6">
+                  <card>
+                    <card-body style="border:1px solid #C5C5C5;">
+                      <div class="row">
+                        <div class="col-6" style="margin-top:10px;">
+                          Call Button: {{button.text}}
+                        </div>
+                      </div>
+                      <div class="row">
+                        <div class="col-6" style="margin-top:10px;">
+                          Phone number: {{button.phone_number}}
+                        </div>
+                      </div>
+                    </card-body>
+                  </card>
+                </div>
+              </div>
+          </div>
+          <hr style="margin-top:10px;">
+        </template>
+
+
+        <template v-if="button.type == 'QUICK_REPLY'">
+          <div class="row">
+              <div class="row">
+                <div class="col-6">
+                  <card>
+                    <card-body style="border:1px solid #C5C5C5;">
+                      <div class="row">
+                        <div class="col-6" style="margin-top:10px;">
+                          Quick reply: {{button.text}}
+                        </div>
+                      </div>
+                    </card-body>
+                  </card>
+                </div>
+              </div>
+          </div>
+          <hr style="margin-top:10px;">
+        </template>
+
+        <template v-if="button.type == 'CATALOG'">
+          <div class="row">
+              <div class="row">
+                <div class="col-6">
+                  <card>
+                    <card-body style="border:1px solid #C5C5C5;">
+                      <div class="row">
+                        <div class="col-6" style="margin-top:10px;">
+                          Text: {{button.text}}
+                        </div>
+                      </div>
+                    </card-body>
+                  </card>
+                </div>
+              </div>
+          </div>
+          <hr style="margin-top:10px;">
+        </template>
       </div>
     </template>
-    <hr>
   </card-body>
+
   <card-body>
     <div class="row" id="row_margin">
-      <div class="flex-fill fw-bold fs-16px">Preview</div>
+      <div class="flex-fill fw-bold fs-16px">Message preview</div>
     </div>
-    <div class="row">
-      <div class="col-xl-6">
-        <div class="row">
-          <div class="col-md-6">
-            <input type="text" class="form-control" id="exampleFormControlInput1" placeholder="Receiver Phone Number" v-model="recipient"/>
-          </div>
-          <div class="col-md-6">
-            <button class="btn btn-default rounded-0" type="button" @click="preview"><span class="d-none d-md-inline">send</span></button>
-          </div>
-        </div>
+    <div class="row" style="margin-top:10px;">
+      <div class="col-6">
+        <card>
+          <card-body style="border:1px solid #C5C5C5;background-color:#ffffe0;">
+              <p class="card-text">Please input the phone number for message preview</p>
+              <div class="row">
+                <div class="col-12" style="margin-top:10px;">
+                  <input type="text" class="form-control" id="exampleFormControlInput1" placeholder="Country code + phone number" v-model="recipient"/>
+                </div>
+              </div>
+              <div class="row">
+                <div class="col-12" style="margin-top:10px;">
+                  <button type="button" class="btn btn-primary mb-1 me-1" @click="preview">Preview</button>
+                </div>
+              </div>
+          </card-body>
+        </card>
       </div>
     </div>
+    <hr style="margin-top:10px;">
   </card-body>
   <hr>
+
   <card-body>
     <div class="row" id="row_margin">
-      <div class="flex-fill fw-bold fs-16px">Bulk Send</div>
+      <div class="flex-fill fw-bold fs-16px">Send to multiple recipients</div>
     </div>
-    <div class="row">
-      <div class="col-xl-6">
-        <div class="row">
-          <div class="col-md-6">
-            <input type="file" class="form-control" id="defaultFile" @change="uploadExcel" accept=".csv, application/vnd.openxmlformats-officedocument.spreadsheetml.sheet, application/vnd.ms-excel"/>
-          </div>
-          <div class="col-md-6">
-            <button class="btn btn-default rounded-0" type="button" @click="bulk_send"><span class="d-none d-md-inline">Bulk Send</span></button>
-          </div>
-        </div>
+    <div class="row" style="margin-top:10px;">
+      <div class="col-6">
+        <card>
+          <card-body style="border:1px solid #C5C5C5;background-color:#ffffe0;">
+              <div class="row">
+                <div class="col-12" style="margin-top:10px;">
+                  <input type="file" class="form-control" id="defaultFile" @change="uploadExcel" accept=".csv, application/vnd.openxmlformats-officedocument.spreadsheetml.sheet, application/vnd.ms-excel"/>
+                </div>
+              </div>
+              <div class="row">
+                <div class="col-12" style="margin-top:10px;">
+                  <button type="button" class="btn btn-primary mb-1 me-1" @click="bulk_send">Send Multiples</button>
+                </div>
+              </div>
+          </card-body>
+        </card>
       </div>
     </div>
   </card-body>

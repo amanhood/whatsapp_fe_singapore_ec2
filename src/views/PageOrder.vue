@@ -139,16 +139,6 @@ getOrder()
     </div>
   </div>
 
-	<div class="d-flex align-items-center mb-3">
-		<div>
-			<ul class="breadcrumb">
-				<li class="breadcrumb-item"><a href="#">PAGES</a></li>
-				<li class="breadcrumb-item active">ORDERS</li>
-			</ul>
-			<h1 class="page-header mb-0">Orders</h1>
-		</div>
-	</div>
-
 	<card>
 		<ul class="nav nav-tabs nav-tabs-v2 px-4">
 			<li class="nav-item me-3"><a href="#allTab" class="nav-link active px-2" data-bs-toggle="tab">All</a></li>

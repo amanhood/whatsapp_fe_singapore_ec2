@@ -1,13 +1,104 @@
 <script setup lang="ts">
-import { useAppSidebarMenuStore } from '@/stores/app-sidebar-menu';
+//import { useAppSidebarMenuStore } from '@/stores/app-sidebar-menu';
 import { useAppOptionStore } from '@/stores/app-option';
 import { onMounted } from 'vue';
 import { slideToggle } from '@/composables/slideToggle.js';
 import { slideUp } from '@/composables/slideUp.js';
 import { slideDown } from '@/composables/slideDown.js';
 import SidebarNav from '@/assets/components/app/SidebarNav.vue';
+import { ref } from 'vue'
+import { getRequest,postRequest,deleteRequest } from '@/composables/api.js'
 
-const appSidebarMenu = useAppSidebarMenuStore();
+let menu = ref([])
+let username = ref(null)
+let token = ref(null)
+let whatsapp_accounts_number = ref(0)
+token = sessionStorage.getItem("token")
+username = sessionStorage.getItem("username")
+whatsapp_accounts_number.value = sessionStorage.getItem("whatsapp_accounts_number")
+
+
+let login_menu = [
+	{
+		text: 'Login System',
+		is_header: true
+	},
+	{
+		url: '/page/login',
+		icon: 'fa fa-user-circle',
+		text: 'Login'
+	},
+	{
+		is_divider: true
+	}
+]
+
+let logout_menu = [
+	{
+		text: 'Login System',
+		is_header: true
+	},
+	{
+		url: '/page/login',
+		icon: 'fa fa-user-circle',
+		text: 'Logout'
+	},
+	{
+		is_divider: true
+	}
+]
+
+let whatsapp_account_menu = [
+	{
+		text: 'Connect Whatsapp Account',
+		is_header: true
+	},
+	{
+		url: '/page/connect_whatsapp',
+		icon: 'fa fa-user-circle',
+		text: 'Connect'
+	},
+	{
+		is_divider: true
+	}
+]
+
+let marketing_templates_menu = [
+	{
+		text: 'Marketing Message Templates',
+		is_header: true
+	},
+	{
+		url: '/page/marketing_templates',
+		icon: 'fa fa-cog',
+		text: 'Manage'
+	},
+	{
+		is_divider: true
+	}
+]
+
+let auto_reply_menu = [
+	{
+		text: 'Auto Reply of Whatspp Account',
+		is_header: true
+	},
+	{
+		url: '/page/auto_reply_setting',
+		icon: 'fa fa-cog',
+		text: 'Manage'
+	},
+	{
+		is_divider: true
+	}
+]
+
+if(token){
+	menu.value = [...logout_menu,...whatsapp_account_menu,...marketing_templates_menu,...auto_reply_menu]
+}
+
+//const appSidebarMenu = useAppSidebarMenuStore();
+const appSidebarMenu = menu
 const appOption = useAppOptionStore();
 var appSidebarFloatSubmenuTimeout = '';
 var appSidebarFloatSubmenuDom = '';
@@ -233,6 +324,7 @@ onMounted(() => {
 
 	handleSidebarMinifyFloatMenu();
 });
+
 </script>
 <template>
 	<div id="sidebar" class="app-sidebar">
