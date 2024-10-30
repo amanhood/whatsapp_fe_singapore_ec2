@@ -49,9 +49,15 @@ function checkLogin(){
   }
 }
 
-function go(){
+function go_marketing_templates(){
   router.push({
       path: '/page/marketing_templates'
+  });
+}
+
+function go_auto_reply(){
+  router.push({
+      path: '/page/auto_reply_setting'
   });
 }
 
@@ -153,8 +159,8 @@ window.addEventListener('message', sessionInfoListener);
                 <tbody>
     							<tr v-for="account in whatsapp_accounts">
     								<td class="align-middle">{{account.phone_number}}</td>
-                    <td class="align-middle"><button type="button" class="btn btn-yellow" @click="go">Access</button></td>
-                    <td class="align-middle"><button type="button" class="btn btn-yellow">Access</button></td>
+                    <td class="align-middle"><button type="button" class="btn btn-yellow" @click="go_marketing_templates">Access</button></td>
+                    <td class="align-middle"><button type="button" class="btn btn-yellow" @click="go_auto_reply">Access</button></td>
     								<td class="align-middle"><button type="button" class="btn btn-yellow">Access</button></td>
                     <td class="align-middle"><button type="button" class="btn btn-yellow">Access</button></td>
                   </tr>

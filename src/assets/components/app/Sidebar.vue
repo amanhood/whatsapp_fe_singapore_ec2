@@ -50,13 +50,18 @@ let logout_menu = [
 
 let whatsapp_account_menu = [
 	{
-		text: 'Connect Whatsapp Account',
+		text: 'Whatsapp and Business Account',
 		is_header: true
 	},
 	{
 		url: '/page/connect_whatsapp',
 		icon: 'fa fa-user-circle',
-		text: 'Connect'
+		text: 'Connect whatsapp'
+	},
+	{
+		url: '/page/connect-business-account',
+		icon: 'fa fa-user-circle',
+		text: 'Connect business'
 	},
 	{
 		is_divider: true
@@ -93,8 +98,23 @@ let auto_reply_menu = [
 	}
 ]
 
+let whatsapp_ecommerce = [
+	{
+		text: 'Whatsapp Ecommerce',
+		is_header: true
+	},
+	{
+		url: '/page/whatsapp-ecommerce',
+		icon: 'fa fa-cog',
+		text: 'Manage'
+	},
+	{
+		is_divider: true
+	}
+]
+
 if(token){
-	menu.value = [...logout_menu,...whatsapp_account_menu,...marketing_templates_menu,...auto_reply_menu]
+	menu.value = [...logout_menu,...whatsapp_account_menu,...marketing_templates_menu,...auto_reply_menu,...whatsapp_ecommerce]
 }
 
 //const appSidebarMenu = useAppSidebarMenuStore();

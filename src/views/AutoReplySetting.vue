@@ -22,9 +22,9 @@ let parent_id = ref(null)
 let message = ref(null)
 let message_types = [
   {value:'text_message',label:'Text Message'},
-  {value:'button',label:'Button'},
-  {value:'flow',label:'Flow'},
-  {value:'url',label:'Url'}
+  {value:'button',label:'Text Button'},
+  {value:'flow',label:'Flow Button'},
+  {value:'url',label:'Url Button'}
 ]
 let flow_id = ref(null)
 let url_header_text = ref(null)
@@ -362,7 +362,8 @@ checkWaba()
                 <div class="col-md-8">Flow template</div>
               </div>
               <div class="row" v-if="button.button_type =='url'">
-                <div class="col-md-8">Button content</div>
+                <div class="col-md-4">Button title</div>
+                <div class="col-md-8">Button Link</div>
               </div>
             </div>
 
@@ -384,7 +385,7 @@ checkWaba()
                 <div class="col-md-7">
                     <textarea class="form-control" placeholder="" v-model="button.button_text" rows="3"/>
                 </div>
-                <div class="col-md-1"><button type="button" class="btn btn-danger mb-1 me-1" @click="deleteButtonAtEditMessage(button.id)(button.id)">X</button></div>
+                <div class="col-md-1"><button type="button" class="btn btn-danger mb-1 me-1" @click="deleteButtonAtEditMessage(button.id)">X</button></div>
               </div>
               <div class="row" v-else-if="button.button_type =='flow'">
                 <div class="col-md-4"><input type="text" class="form-control" placeholder="" v-model="button.title"/></div>
@@ -393,31 +394,38 @@ checkWaba()
                       <option v-for="item in flows" :key="item.value" :value="item.value">{{item.label}}</option>
                     </select>
                 </div>
-                <div class="col-md-1"><button type="button" class="btn btn-danger mb-1 me-1" @click="deleteButtonAtEditMessage(button.id)(button.id)">X</button></div>
+                <div class="col-md-1"><button type="button" class="btn btn-danger mb-1 me-1" @click="deleteButtonAtEditMessage(button.id)">X</button></div>
               </div>
               <div class="row" v-else-if="button.button_type =='url'">
-                
+                  <div class="col-md-4">
+                      <input type="text" class="form-control" placeholder="" v-model="button.title"/>
+                  </div>
+                  <div class="col-md-7">
+                      <input type="text" class="form-control" placeholder="" v-model="button.url"/>
+                  </div>
+                  <div class="col-md-1"><button type="button" class="btn btn-danger mb-1 me-1" @click="deleteButtonAtEditMessage(button.id)">X</button></div>
 
+                  <div class="row" style="margin-top:10px;">
+                    <div class="col-md-4">
+                        <label class="form-label" for="exampleFormControlInput1" style="font-weight:normal;">Text of Link Button</label>
+                        <input type="text" class="form-control" placeholder="" v-model="button.url_button_text"/>
+                    </div>
+                    <div class="col-md-4">
+                        <label class="form-label" for="exampleFormControlInput1" style="font-weight:normal;">Header of button</label>
+                        <input type="text" class="form-control" placeholder="" v-model="button.url_header_text"/>
+                    </div>
 
-                <div class="col-md-3">
-                  <input type="text" class="form-control" placeholder="Button title" v-model="button.title"/>
-                </div>
-                <div class="col-md-3">
-                  <input type="text" class="form-control" placeholder="Header" v-model="button.url_header_text"/>
-                </div>
-                <div class="col-md-3">
-                  <input type="text" class="form-control" placeholder="Body" v-model="button.url_body_text"/>
-                </div>
-                <div class="col-md-2">
-                  <input type="text" class="form-control" placeholder="Footer" v-model="button.url_footer_text"/>
-                </div>
-                <div class="col-md-3" style="margin-top:10px;">
-                  <input type="text" class="form-control" placeholder="Button text" v-model="button.url_button_text"/>
-                </div>
-                <div class="col-md-8" style="margin-top:10px;">
-                  <input type="text" class="form-control" placeholder="Url" v-model="button.url"/>
-                </div>
-                <div class="col-md-1" style="margin-top:10px;"><button type="button" class="btn btn-danger mb-1 me-1" @click="deleteButtonAtEditMessage(button.id)(button.id)">X</button></div>
+                    <div class="col-md-4">
+                        <label class="form-label" for="exampleFormControlInput1" style="font-weight:normal;">Footer of button</label>
+                        <input type="text" class="form-control" placeholder="" v-model="button.url_footer_text"/>
+                    </div>
+                  </div>
+                  <div class="row" style="margin-top:10px;">
+                    <div class="col-md-6">
+                        <label class="form-label" for="exampleFormControlInput1" style="font-weight:normal;">Body of button</label>
+                        <textarea class="form-control" placeholder="" v-model="button.url_body_text" rows="3"/>
+                    </div>
+                  </div>
               </div>
             </div>
           </div>
@@ -442,71 +450,90 @@ checkWaba()
           <div class="row">
             <div class="col-xl-6">
               <div class="form-group mb-3">
-                <input type="text" class="form-control" placeholder="Key" v-model="key"/>
+                <label class="form-label" for="exampleFormControlSelect1" style="font-weight:normal;">First message of auto reply?</label>
+                <select class="form-select" id="exampleFormControlSelect2" v-model="is_parent_id" @change="onSelectParentId">
+                  <option v-for="item in flow_options" :key="item.value" :value="item.value">{{item.label}}</option>
+                </select>
+              </div>
+              <div class="form-group mb-3" v-if="is_parent_id == 'no'">
+                <label class="form-label" for="exampleFormControlSelect1" style="font-weight:normal;">Select parent message</label>
+                <select class="form-select" id="exampleFormControlSelect2" v-model="parent_id">
+                  <option v-for="item in auto_reply_messages_by_parent" :key="item.value" :value="item.value">{{item.label}}</option>
+                </select>
+              </div>
+
+              <div class="form-group mb-3">
+                <label class="form-label" for="exampleFormControlSelect1" style="font-weight:normal;">Key</label>
+                <input type="text" class="form-control" placeholder="" v-model="key"/>
               </div>
               <div class="form-group mb-3">
-                <input type="number" class="form-control" placeholder="Sequence" v-model="sequence"/>
+                <label class="form-label" for="exampleFormControlSelect1" style="font-weight:normal;">Sequence</label>
+                <input type="number" class="form-control" placeholder="" v-model="sequence"/>
               </div>
               <div class="form-group mb-3">
-                <label class="form-label" for="exampleFormControlSelect1">Text Message or Buttons</label>
+                <label class="form-label" for="exampleFormControlSelect1" style="font-weight:normal;">Text Message or Buttons</label>
                 <select class="form-select" id="exampleFormControlSelect1" v-model="selected_message_type" @change="onSelectMessageType">
                   <option v-for="item in message_types" :key="item.value" :value="item.value">{{item.label}}</option>
                 </select>
               </div>
               <div class="form-group mb-3" v-if="selected_message_type=='text_message'">
-                <textarea class="form-control" placeholder="Text message" v-model="message" rows="3"/>
+                <label class="form-label" for="exampleFormControlSelect1" style="font-weight:normal;">Message</label>
+                <textarea class="form-control" placeholder="" v-model="message" rows="3"/>
               </div>
               <div class="form-group mb-3" v-if="selected_message_type=='button'">
-                <textarea class="form-control" placeholder="body of button" v-model="button_body" rows="3"/>
+                <label class="form-label" for="exampleFormControlSelect1" style="font-weight:normal;">Body</label>
+                <textarea class="form-control" placeholder="" v-model="button_body" rows="3"/>
               </div>
               <div class="form-group mb-3" v-if="selected_message_type=='flow'">
+                <label class="form-label" for="exampleFormControlSelect1" style="font-weight:normal;">Select flow template</label>
                 <select class="form-select" id="exampleFormControlSelect2" v-model="flow_id">
                   <option v-for="item in flows" :key="item.value" :value="item.value">{{item.label}}</option>
                 </select>
               </div>
               <fragment v-if="selected_message_type=='url'">
                 <div class="form-group mb-3">
-                  <input type="text" class="form-control" placeholder="header" v-model="url_header_text"/>
+                  <label class="form-label" for="exampleFormControlSelect1" style="font-weight:normal;">Header</label>
+                  <input type="text" class="form-control" placeholder="" v-model="url_header_text"/>
                 </div>
                 <div class="form-group mb-3">
-                  <input type="text" class="form-control" placeholder="body" v-model="url_body_text"/>
+                  <label class="form-label" for="exampleFormControlSelect1" style="font-weight:normal;">Body</label>
+                  <textarea class="form-control" placeholder="" v-model="url_body_text" rows="3"/>
                 </div>
                 <div class="form-group mb-3">
-                  <input type="text" class="form-control" placeholder="footer" v-model="url_footer_text"/>
+                  <label class="form-label" for="exampleFormControlSelect1" style="font-weight:normal;">Footer</label>
+                  <input type="text" class="form-control" placeholder="" v-model="url_footer_text"/>
                 </div>
                 <div class="form-group mb-3">
-                  <input type="text" class="form-control" placeholder="text" v-model="url_button_text"/>
+                  <label class="form-label" for="exampleFormControlSelect1" style="font-weight:normal;">Display text of button</label>
+                  <input type="text" class="form-control" placeholder="" v-model="url_button_text"/>
                 </div>
                 <div class="form-group mb-3">
-                  <input type="text" class="form-control" placeholder="url" v-model="url"/>
+                  <label class="form-label" for="exampleFormControlSelect1" style="font-weight:normal;">Url</label>
+                  <input type="text" class="form-control" placeholder="" v-model="url"/>
                 </div>
               </fragment>
-              <div class="form-group mb-3">
-                <label class="form-label" for="exampleFormControlSelect1">is it a first message of auto reply flow?</label>
-                <select class="form-select" id="exampleFormControlSelect2" v-model="is_parent_id" @change="onSelectParentId">
-                  <option v-for="item in flow_options" :key="item.value" :value="item.value">{{item.label}}</option>
-                </select>
-              </div>
-              <div class="form-group mb-3" v-if="is_parent_id == 'no'">
-                <select class="form-select" id="exampleFormControlSelect2" v-model="parent_id">
-                  <option v-for="item in auto_reply_messages_by_parent" :key="item.value" :value="item.value">{{item.label}}</option>
-                </select>
-              </div>
             </div>
           </div>
 
           <div class="row" v-if="selected_message_type=='button'">
             <div class="form-group mb-3" style="margin-top:10px;">
-              <button type="button" class="btn btn-default" @click="addButton">Add Button</button>
+              <button type="button" class="btn btn-teal" @click="addButton">Add Button</button>
             </div>
           </div>
 
-          <div class="row" v-for="button in buttons">
+          <div class="row" v-for="button in buttons" style="margin-bottom:10px;">
             <div class="col-xl-4">
               <div class="row">
-                <div class="col-md-4"><input type="text" class="form-control" placeholder="Key" v-model="button.key"/></div>
-                <div class="col-md-4"><input type="number" class="form-control" placeholder="Sequence" v-model="button.sequence"/></div>
                 <div class="col-md-4">
+                  <label class="form-label" for="exampleFormControlInput1" style="font-weight:normal;">Key</label>
+                  <input type="text" class="form-control" placeholder="" v-model="button.key"/>
+                </div>
+                <div class="col-md-4">
+                  <label class="form-label" for="exampleFormControlInput1" style="font-weight:normal;">Sequence</label>
+                  <input type="number" class="form-control" placeholder="" v-model="button.sequence"/>
+                </div>
+                <div class="col-md-4">
+                    <label class="form-label" for="exampleFormControlInput1" style="font-weight:normal;">Button type</label>
                     <select class="form-select" id="exampleFormControlSelect1" v-model="button.button_type">
                       <option v-for="item in button_types" :key="item.value" :value="item.value">{{item.label}}</option>
                     </select>
@@ -515,51 +542,74 @@ checkWaba()
             </div>
             <div class="col-xl-8">
               <div class="row" v-if="button.button_type =='text_message'">
-                <div class="col-md-4"><input type="text" class="form-control" placeholder="Button title" v-model="button.title"/></div>
-                <div class="col-md-7">
-                    <textarea class="form-control" placeholder="Text message" v-model="button.button_text" rows="3"/>
+                <div class="col-md-4">
+                  <label class="form-label" for="exampleFormControlInput1" style="font-weight:normal;">Title</label>
+                  <input type="text" class="form-control" placeholder="" v-model="button.title"/>
                 </div>
-                <div class="col-md-1"><button type="button" class="btn btn-default mb-1 me-1" @click="deleteButton(button.id)">X</button></div>
+                <div class="col-md-7">
+                    <label class="form-label" for="exampleFormControlInput1" style="font-weight:normal;">Message</label>
+                    <textarea class="form-control" placeholder="" v-model="button.button_text" rows="3"/>
+                </div>
+                <div class="col-md-1">
+                  <label class="form-label" for="exampleFormControlInput1" style="font-weight:normal;">Delete</label>
+                  <button type="button" class="btn btn-danger mb-1 me-1" @click="deleteButton(button.id)">X</button>
+                </div>
               </div>
               <div class="row" v-else-if="button.button_type =='flow'">
-                <div class="col-md-4"><input type="text" class="form-control" placeholder="Button title" v-model="button.title"/></div>
-                <div class="col-md-4" v-if="button.button_type =='flow' && flows.length > 0">
+                <div class="col-md-4">
+                  <label class="form-label" for="exampleFormControlInput1" style="font-weight:normal;">Title</label>
+                  <input type="text" class="form-control" placeholder="Button title" v-model="button.title"/>
+                </div>
+                <div class="col-md-7" v-if="button.button_type =='flow' && flows.length > 0">
+                    <label class="form-label" for="exampleFormControlInput1" style="font-weight:normal;">Select flow template</label>
                     <select class="form-select" id="exampleFormControlSelect2" v-model="button.flow_id">
                       <option v-for="item in flows" :key="item.value" :value="item.value">{{item.label}}</option>
                     </select>
                 </div>
-                <div class="col-md-1"><button type="button" class="btn btn-default mb-1 me-1" @click="deleteButton(button.id)">X</button></div>
+                <div class="col-md-1">
+                  <label class="form-label" for="exampleFormControlInput1" style="font-weight:normal;">Delete</label>
+                  <button type="button" class="btn btn-danger mb-1 me-1" @click="deleteButton(button.id)">X</button>
+                </div>
               </div>
               <div class="row" v-else-if="button.button_type =='url'">
-                <div class="col-md-4">
-                  <input type="text" class="form-control" placeholder="Header" v-model="button.url_header_text"/>
-                </div>
-                <div class="col-md-4">
-                  <input type="text" class="form-control" placeholder="Body" v-model="button.url_body_text"/>
-                </div>
-                <div class="col-md-4">
-                  <input type="text" class="form-control" placeholder="Footer" v-model="button.url_footer_text"/>
-                </div>
                 <div class="col-md-4" style="margin-top:10px;">
-                  <input type="text" class="form-control" placeholder="Button text" v-model="button.url_button_text"/>
+                  <label class="form-label" for="exampleFormControlInput1" style="font-weight:normal;">Display text of button</label>
+                  <input type="text" class="form-control" placeholder="" v-model="button.url_button_text"/>
                 </div>
-                <div class="col-md-4" style="margin-top:10px;">
-                  <input type="text" class="form-control" placeholder="Url" v-model="button.url"/>
+                <div class="col-md-7" style="margin-top:10px;">
+                  <label class="form-label" for="exampleFormControlInput1" style="font-weight:normal;">Url</label>
+                  <input type="text" class="form-control" placeholder="" v-model="button.url"/>
                 </div>
-                <div class="col-md-1" style="margin-top:10px;"><button type="button" class="btn btn-default mb-1 me-1" @click="deleteButton(button.id)">X</button></div>
+                <div class="col-md-1" style="margin-top:10px;">
+                  <label class="form-label" for="exampleFormControlInput1" style="font-weight:normal;">Delete</label>
+                  <button type="button" class="btn btn-danger mb-1 me-1" @click="deleteButton(button.id)">X</button>
+                </div>
+                <div class="col-md-4">
+                  <label class="form-label" for="exampleFormControlInput1" style="font-weight:normal;">Header</label>
+                  <input type="text" class="form-control" placeholder="" v-model="button.url_header_text"/>
+                </div>
+                <div class="col-md-4">
+                  <label class="form-label" for="exampleFormControlInput1" style="font-weight:normal;">Body</label>
+                  <textarea class="form-control" placeholder="" v-model="button.url_body_text" rows="3"/>
+                </div>
+                <div class="col-md-4">
+                  <label class="form-label" for="exampleFormControlInput1" style="font-weight:normal;">Footer</label>
+                  <input type="text" class="form-control" placeholder="" v-model="button.url_footer_text"/>
+                </div>
+
               </div>
             </div>
           </div>
 
           <div class="row">
             <div class="form-group mb-3" style="margin-top:10px;">
-              <button type="button" class="btn btn-default" data-bs-dismiss="modal" @click="createAutoReplyMessage">Create</button>
+              <button type="button" class="btn btn-teal" data-bs-dismiss="modal" @click="createAutoReplyMessage">Create Auto Reply</button>
             </div>
           </div>
         </div>
 
         <div class="modal-footer">
-          <button type="button" class="btn btn-default" data-bs-dismiss="modal">Close</button>
+          <button type="button" class="btn btn-yellow" data-bs-dismiss="modal">Close</button>
         </div>
       </div>
     </div>
@@ -584,7 +634,7 @@ checkWaba()
       <div class="row">
         <div class="col-md-6">
           <div class="row" style="margin-bottom:10px;">
-            <div class="flex-fill fw-bold fs-16px">Select sender</div>
+            <div class="flex-fill fw-bold fs-16px">Select phone number</div>
           </div>
           <div class="row">
             <div class="col-md-6">
