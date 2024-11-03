@@ -17,5 +17,6 @@ export default defineConfig({
   optimizeDeps: {
     exclude: ['vue-demi']
 	},
-  server: { https: true }
+  // set true if need https
+  server: { https: false }
 });
