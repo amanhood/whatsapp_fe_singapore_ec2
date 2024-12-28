@@ -74,6 +74,9 @@ async function getTemplates(waba_id,phone_number_id){
                 }
               }
             });
+          } else {
+            item['is_mpm'] = false
+            item['can_delete'] = true
           }
         });
       });
@@ -181,15 +184,15 @@ checkWaba()
 							</tr>
 						</thead>
 						<tbody>
-							<tr v-for="template in templates">
+							<tr v-for="template in templates">         
                 <td class="align-middle">{{template.name}}</td>
-								<td class="align-middle">{{template.category}}</td>
-								<td class="align-middle">{{template.language}}</td>
-								<td class="align-middle">{{template.status}}</td>
+                <td class="align-middle">{{template.category}}</td>
+                <td class="align-middle">{{template.language}}</td>
+                <td class="align-middle">{{template.status}}</td>
                 <td class="align-middle" v-if="template.can_delete == true"><button type="button" @click="messaging(template)" class="btn btn-yellow me-2">Send Message</button></td>
                 <td class="align-middle" v-else></td>
                 <td class="align-middle" v-if="template.can_delete == true"><button type="button" @click="deleteTemplate(template.id,template.name)" class="btn btn-danger me-2">Delete</button></td>
-                <td class="align-middle" v-else></td>
+                <td class="align-middle" v-else></td>      
               </tr>
 						</tbody>
 					</table>

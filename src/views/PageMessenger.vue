@@ -56,7 +56,7 @@ export default {
 				<perfect-scrollbar class="h-100">
 					<div class="messenger-item">
 						<a href="#" data-toggle="messenger-content" class="messenger-link active">
-							<div class="messenger-media bg-theme text-black text-opacity-75 rounded-pill fs-24px fw-bold">
+							<div class="messenger-media bg-theme text-black text-opacity-75 rounded-pill fs-12px fw-bold">
 								<i class="bi bi-android2"></i>
 							</div>
 							<div class="messenger-info">

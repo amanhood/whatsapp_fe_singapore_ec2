@@ -51,20 +51,33 @@ let languages = [
         { id:'es',title: "Spanish" }
       ]
 
+let button_types = [
+  { id:'quick_reply',title: "Quick reply" },
+  { id:'website',title: "Website" },
+  { id:'phone',title: "Phone" },
+  { id:'offer',title: "Offer" }
+]
+
+let url_options = [
+{ id:'static',title: "Static" },
+{ id:'dynamic',title: "Dynamic" }
+]
+
 
 function selectButton(){
-    if(selected_button_type.value == "quick_reply"){
+    console.log(selected_button_type)
+    if(selected_button_type.value.id == "quick_reply"){
       custom_button_shown.value = true
-      buttons.value.push({'id':button_id.value,'type':selected_button_type.value,text:''})
-    } else if (selected_button_type.value == "website"){
+      buttons.value.push({'id':button_id.value,'type':selected_button_type.value.id,text:''})
+    } else if (selected_button_type.value.id == "website"){
       custom_button_shown.value = true
-      buttons.value.push({'id':button_id.value,'type':selected_button_type.value,text:'','url':'','variable':'','url_type':''})
-    } else if (selected_button_type.value == "phone"){
+      buttons.value.push({'id':button_id.value,'type':selected_button_type.value.id,text:'','url':'','variable':'','url_type':''})
+    } else if (selected_button_type.value.id == "phone"){
       custom_button_shown.value = true
-      buttons.value.push({'id':button_id.value,'type':selected_button_type.value,text:'','country':'','phone_number':''})
-    } else if (selected_button_type.value == "offer"){
+      buttons.value.push({'id':button_id.value,'type':selected_button_type.value.id,text:'','country':'','phone_number':''})
+    } else if (selected_button_type.value.id == "offer"){
       custom_button_shown.value = true
-      buttons.value.push({'id':button_id.value,'type':selected_button_type.value,offer_code:''})
+      buttons.value.push({'id':button_id.value,'type':selected_button_type.value.id,offer_code:''})
     }
     button_id.value += 1
     //console.log(buttons.value)
@@ -281,10 +294,10 @@ async function submitForm(payload){
           <div class="flex-fill fw-bold fs-16px">Template name and language</div>
         </div>
         <div class="row">
-          <div class="col-md-3">
+          <div class="col-md-6">
             <input type="text" class="form-control" placeholder="name" v-model="template_name"/>
           </div>
-          <div class="col-md-3">
+          <div class="col-md-6">
             <v-select v-model="selected_language" :options="languages" label="title"></v-select>
           </div>
         </div>
@@ -393,13 +406,7 @@ async function submitForm(payload){
         </div>
         <div class="row" style="margin-bottom:20px;">
           <div class="col-md-6">
-            <select class="form-select" v-model="selected_button_type" @change="selectButton">
-              <option selected>Add a button</option>
-              <option value="quick_reply">Quick Reply</option>
-              <option value="website">Visit website</option>
-              <option value="phone">Phone call</option>
-              <option value="offer">Offer</option>
-            </select>
+              <v-select v-model="selected_button_type" :options="button_types" label="title" @update:modelValue="selectButton"></v-select>
           </div>
         </div>
         <hr>
@@ -414,19 +421,22 @@ async function submitForm(payload){
           </template>
           <template v-if="button.type == 'website'">
             <div class="row" style="margin-bottom:10px">
-              <div class="col-md-3">
-                <select class="form-select" v-model="button.url_type" @change="urltype(button.url_type,button.id)">
-                  <option value="static">Static</option>
-                  <option value="dynamic">Dynamic</option>
-                </select>
+              <div class="col-md-6">
+                  <v-select v-model="button.url_type" :options="url_options" label="title" @update:modelValue="urltype(button.url_type,button.id)"></v-select>
               </div>
             </div>
-            <div class="row" v-if="button.url_type == 'static'">
+            <div class="row" v-if="button.url_type.id == 'static'">
               <div class="col-md-6">
                 <input type="text" class="form-control" placeholder="https://abc.com/static/" v-model="button.url"/>
               </div>
+              <div class="col-md-3">
+                <input type="text" class="form-control" placeholder="button text" v-model="button.text"/>
+              </div>
+              <div class="col-md-3">
+                <button type="button" class="btn btn-danger mb-1 me-1" @click="deleteButton(button.id)">delete</button>
+              </div>
             </div>
-            <div class="row" v-if="button.url_type == 'dynamic'">
+            <div class="row" v-if="button.url_type.id == 'dynamic'">
               <div class="row" style="margin-bottom:10px;">
                 <div class="col-md-6">
                   <input type="text" class="form-control" placeholder="https://abc.com/{{1}}/" v-model="button.url"/>

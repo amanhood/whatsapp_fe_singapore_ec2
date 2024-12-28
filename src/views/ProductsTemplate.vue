@@ -44,6 +44,11 @@ let languages = [
         { id:'es',title: "Spanish" }
       ]
 
+let button_types = [
+  { id:'PC',title: "All products" },
+  { id:'MPM',title: "Multiple products" }
+]
+
 function urltype(urltype,button_id){
     //console.log(urltype)
     //console.log(buttons.value)
@@ -121,7 +126,7 @@ function submit(){
     let header_component = null
     if(selected_button_type.value){
       if(selected_language.value){
-        if(selected_button_type.value == "PC"){
+        if(selected_button_type.value.id == "PC"){
           button_component = {
             "type": "BUTTONS",
             "buttons": [
@@ -190,7 +195,7 @@ function submit(){
             "text": footer.value
           })
         }
-        if(selected_button_type.value == "MPM"){
+        if(selected_button_type.value.id == "MPM"){
           data['component'].push(header_component)
         }
         data['component'].push(button_component)
@@ -249,11 +254,14 @@ async function submitForm(payload){
           <div class="flex-fill fw-bold fs-16px">Catalog or Multiple Product Template</div>
         </div>
         <div class="row">
-          <div class="col-md-3">
+          <!-- <div class="col-md-3">
             <select class="form-select" v-model="selected_button_type" @change="selectButton">
               <option value="PC">Catalog Template</option>
               <option value="MPM">Multiple Product Template</option>
             </select>
+          </div> -->
+          <div class="col-md-6">
+              <v-select v-model="selected_button_type" :options="button_types" label="title"></v-select>
           </div>
         </div>
       </div>
