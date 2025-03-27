@@ -61,6 +61,18 @@ function go_auto_reply(){
   });
 }
 
+function go_ecommerce(){
+  router.push({
+      path: '/page/whatsapp-ecommerce'
+  });
+}
+
+function go_order(){
+  router.push({
+      path: '/page/order'
+  });
+}
+
 checkLogin()
 checkWaba()
 //getTemplates()
@@ -161,8 +173,8 @@ window.addEventListener('message', sessionInfoListener);
     								<td class="align-middle">{{account.phone_number}}</td>
                     <td class="align-middle"><button type="button" class="btn btn-yellow" @click="go_marketing_templates">Access</button></td>
                     <td class="align-middle"><button type="button" class="btn btn-yellow" @click="go_auto_reply">Access</button></td>
-    								<td class="align-middle"><button type="button" class="btn btn-yellow">Access</button></td>
-                    <td class="align-middle"><button type="button" class="btn btn-yellow">Access</button></td>
+    								<td class="align-middle"><button type="button" class="btn btn-yellow" @click="go_ecommerce">Access</button></td>
+                    <td class="align-middle"><button type="button" class="btn btn-yellow" @click="go_order">Access</button></td>
                   </tr>
                 </tbody>
               </table>

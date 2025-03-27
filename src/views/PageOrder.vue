@@ -175,8 +175,10 @@ getOrder()
                 <th class="border-top-0 pt-0 pb-2">Order Email</th>
                 <th class="border-top-0 pt-0 pb-2">Address</th>
 								<th class="border-top-0 pt-0 pb-2">Items</th>
-								<th class="border-top-0 pt-0 pb-2">Total</th>
-								<th class="border-top-0 pt-0 pb-2">Payment status</th>
+                <th class="border-top-0 pt-0 pb-2">Cart Fee</th>
+                <th class="border-top-0 pt-0 pb-2">Delivery Fee</th>
+								<th class="border-top-0 pt-0 pb-2">Total Fee</th>
+								<th class="border-top-0 pt-0 pb-2">Payment Status</th>
 								<th class="border-top-0 pt-0 pb-2">Payment Request</th>
                 <th class="border-top-0 pt-0 pb-2">Address Request</th>
                 <th class="border-top-0 pt-0 pb-2">Complete</th>
@@ -193,6 +195,8 @@ getOrder()
                 <td class="align-middle">{{cart.recipient_email}}</td>
                 <td class="align-middle">{{cart.delivery_address}}</td>
 								<td class="align-middle">{{cart.items}}</td>
+                <td>${{cart.cart_amount}}</td>
+                <td>${{cart.delivery_fee}}</td>
 								<td>${{cart.total_amount}}</td>
 								<td class="py-1 align-middle">
                   <div v-if="cart.is_paid"><span class="badge bg-teal text-teal-800 bg-opacity-25 px-2 pt-5px pb-5px rounded fs-12px d-inline-flex align-items-center"><i class="fa fa-circle text-teal fs-9px fa-fw me-5px"></i> Paid</span></div>
@@ -200,7 +204,8 @@ getOrder()
                 </td>
 								<td class="align-middle" v-if="cart.is_paid == false"><button type="button" @click="sendPaymentRequest(cart.id)" class="btn btn-info btn-sm">send</button></td>
                 <td class="align-middle" v-else></td>
-                <td class="align-middle"><button type="button" @click="sendAddressRequest(cart.id)" class="btn btn-yellow btn-sm">send</button></td>
+                <td class="align-middle" v-if="cart.delivery_address == null"><button type="button" @click="sendAddressRequest(cart.id)" class="btn btn-yellow btn-sm">send</button></td>
+                <td class="align-middle" v-else></td>
                 <td class="align-middle"><div class="form-check form-switch"><input type="checkbox" class="form-check-input" id="customSwitch1" @click="updateOrderStatus(cart.id,cart.is_paid)" v-model="cart.is_paid"></div></td>
               </tr>
 						</tbody>

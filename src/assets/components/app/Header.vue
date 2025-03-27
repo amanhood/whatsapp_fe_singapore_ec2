@@ -48,7 +48,7 @@ username = sessionStorage.getItem("username")
 			</div>
 
 			<a href="#" class="brand-logo">
-				<font style="color:red">C</font>LOUDMEDIA
+				<font style="color:green">Whatsapp</font>
 			</a>
 		</div>
 		<!-- END brand -->

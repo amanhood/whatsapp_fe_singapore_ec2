@@ -249,7 +249,7 @@ function removeIds(obj) {
 
 
 </script>
-
+<!-- 
 <style scoped>
 .container {
   display: flex;
@@ -330,7 +330,7 @@ function removeIds(obj) {
   cursor: move;
 }
 
-</style>
+</style> -->
 
 
 <template>

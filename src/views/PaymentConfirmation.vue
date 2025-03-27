@@ -14,6 +14,8 @@ export default {
 		return {
 			cart_id:"",
 			cart_amount:0,
+			delivery_fee:0,
+			total_amount:0,
 			cart_items:[],
 			payment_status:""
 		}
@@ -30,7 +32,7 @@ export default {
 	},
 	methods: {
 		async getParams() {
-      let order_no = this.$route.query.order_no
+			let order_no = this.$route.query.order_no
 			let currency = this.$route.query.currency
 			let out_trade_no = this.$route.query.out_trade_no
 			let total_fee = this.$route.query.total_fee
@@ -50,13 +52,15 @@ export default {
 			let data = await postWithoutTokenRequest("qfpay_confirmation",payload)
 			if(data['status'] == 200){
 				this.cart_amount = data['data']['cart_amount']
+				this.delivery_fee = data['data']['delivery_fee']
+				this.total_amount = data['data']['total_amount']
 				this.cart_id = order_no
 				this.cart_items = data['data']['items']
 				this.payment_status = data['data']['qf_payment_result']
-		  } else {
-		    console.log("failed")
-		  }
-    }
+			} else {
+				console.log("failed")
+			}
+		}
 	},
 	created(){
 		//console.log(userSession.token)
@@ -75,22 +79,28 @@ export default {
 				</div>
 				<card>
 					<card-body class="pb-2">
-			        <div class="row">
-			          <div class="col-xl-12">
-									<div class="form-group mb-3">
-			              <div class="flex-fill fw-bold fs-16px">Invoice No: {{cart_id}}</div>
-			            </div>
-			            <div class="form-group mb-3">
-			              <div class="flex-fill fw-bold fs-16px">Total Amount: HKD {{cart_amount}}</div>
-			            </div>
-									<div class="form-group mb-3">
-			              <div class="flex-fill fs-16px" v-for="item in cart_items">
-											- {{item.product_name}} x {{item.quantity}}
-										</div>
-			            </div>
-			          </div>
-			        </div>
-			    </card-body>
+						<div class="row">
+							<div class="col-xl-12">
+								<div class="form-group mb-3">
+									<div class="flex-fill fw-bold fs-16px">Invoice No: {{cart_id}}</div>
+								</div>
+								<div class="form-group mb-3">
+									<div class="flex-fill fw-bold fs-16px">Cart Amount: HKD {{cart_amount}}</div>
+								</div>
+								<div class="form-group mb-3">
+										<div class="flex-fill fs-16px" v-for="item in cart_items">
+										- {{item.product_name}} x {{item.quantity}}
+									</div>
+								</div>
+								<div class="form-group mb-3">
+									<div class="flex-fill fw-bold fs-16px">Delivery Fee: HKD {{delivery_fee}}</div>
+								</div>
+								<div class="form-group mb-3">
+									<div class="flex-fill fw-bold fs-16px">Total Amount: HKD {{total_amount}}</div>
+								</div>
+							</div>
+						</div>
+					</card-body>
 				</card>
 			</form>
 		</div>

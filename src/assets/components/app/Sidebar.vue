@@ -1,12 +1,11 @@
 <script setup lang="ts">
-//import { useAppSidebarMenuStore } from '@/stores/app-sidebar-menu';
+import { useAppSidebarMenuStore } from '@/stores/app-sidebar-menu';
 import { useAppOptionStore } from '@/stores/app-option';
-import { onMounted } from 'vue';
+import { onMounted,ref } from 'vue';
 import { slideToggle } from '@/composables/slideToggle.js';
 import { slideUp } from '@/composables/slideUp.js';
 import { slideDown } from '@/composables/slideDown.js';
 import SidebarNav from '@/assets/components/app/SidebarNav.vue';
-import { ref } from 'vue'
 import { getRequest,postRequest,deleteRequest } from '@/composables/api.js'
 
 let menu = ref([])
@@ -17,110 +16,9 @@ token = sessionStorage.getItem("token")
 username = sessionStorage.getItem("username")
 whatsapp_accounts_number.value = sessionStorage.getItem("whatsapp_accounts_number")
 
-
-let login_menu = [
-	{
-		text: 'Login System',
-		is_header: true
-	},
-	{
-		url: '/page/login',
-		icon: 'fa fa-user-circle',
-		text: 'Login'
-	},
-	{
-		is_divider: true
-	}
-]
-
-let logout_menu = [
-	{
-		text: 'Login System',
-		is_header: true
-	},
-	{
-		url: '/page/login',
-		icon: 'fa fa-user-circle',
-		text: 'Logout'
-	},
-	{
-		is_divider: true
-	}
-]
-
-let whatsapp_account_menu = [
-	{
-		text: 'Whatsapp and Business Account',
-		is_header: true
-	},
-	{
-		url: '/page/connect_whatsapp',
-		icon: 'fa fa-user-circle',
-		text: 'Connect whatsapp'
-	},
-	{
-		url: '/page/connect-business-account',
-		icon: 'fa fa-user-circle',
-		text: 'Connect business'
-	},
-	{
-		is_divider: true
-	}
-]
-
-let marketing_templates_menu = [
-	{
-		text: 'Marketing Message Templates',
-		is_header: true
-	},
-	{
-		url: '/page/marketing_templates',
-		icon: 'fa fa-cog',
-		text: 'Manage'
-	},
-	{
-		is_divider: true
-	}
-]
-
-let auto_reply_menu = [
-	{
-		text: 'Auto Reply of Whatspp Account',
-		is_header: true
-	},
-	{
-		url: '/page/auto_reply_setting',
-		icon: 'fa fa-cog',
-		text: 'Manage'
-	},
-	{
-		is_divider: true
-	}
-]
-
-let whatsapp_ecommerce = [
-	{
-		text: 'Whatsapp Ecommerce',
-		is_header: true
-	},
-	{
-		url: '/page/whatsapp-ecommerce',
-		icon: 'fa fa-cog',
-		text: 'Manage'
-	},
-	{
-		is_divider: true
-	}
-]
-
-if(token){
-	menu.value = [...logout_menu,...whatsapp_account_menu,...marketing_templates_menu,...auto_reply_menu,...whatsapp_ecommerce]
-}
-
-//const appSidebarMenu = useAppSidebarMenuStore();
-const appSidebarMenu = menu
+const appSidebarMenu = useAppSidebarMenuStore();
 const appOption = useAppOptionStore();
-var appSidebarFloatSubmenuTimeout = '';
+var appSidebarFloatSubmenuTimeout = 0;
 var appSidebarFloatSubmenuDom = '';
 
 function appSidebarMobileToggled() {
@@ -138,16 +36,16 @@ function handleSidebarMinifyFloatMenuClick() {
 				var targetStyle = getComputedStyle(target);
 				var close = (targetStyle.getPropertyValue('display') != 'none') ? true : false;
 				var expand = (targetStyle.getPropertyValue('display') != 'none') ? false : true;
-
+				
 				slideToggle(target);
-
+				
 				var loopHeight = setInterval(function() {
 					var targetMenu = document.querySelector('.app-float-submenu');
 					var targetHeight = targetMenu.clientHeight;
 					var targetOffset = targetMenu.getBoundingClientRect();
-					var targetOriTop = targetMenu.getAttribute('data-offset-top');
-					var targetMenuTop = targetMenu.getAttribute('data-menu-offset-top');
-					var targetTop 	 = targetOffset.top;
+					var targetOriTop = Number(targetMenu.getAttribute('data-offset-top'));
+					var targetMenuTop = Number(targetMenu.getAttribute('data-menu-offset-top'));
+					var targetTop 	 = Number(targetOffset.top);
 					var windowHeight = document.body.clientHeight;
 					if (close) {
 						if (targetTop > targetOriTop) {
@@ -207,7 +105,7 @@ function handleSidebarMinifyFloatMenu() {
 						var targetLeft    = (bodyStyle.getPropertyValue('direction') != 'rtl') ? sidebarX : 'auto';
 						var targetRight   = (bodyStyle.getPropertyValue('direction') != 'rtl') ? 'auto' : sidebarX;
 						var windowHeight  = document.body.clientHeight;
-
+						
 						if (!document.querySelector('.app-float-submenu')) {
 							var overflowClass = '';
 							if (targetHeight > windowHeight) {
@@ -220,7 +118,7 @@ function handleSidebarMinifyFloatMenu() {
 							html.setAttribute('data-menu-offset-top', targetTop);
 							html.innerHTML = targetMenuHtml;
 							appElm.appendChild(html);
-
+							
 							var elm = document.getElementById('app-float-submenu');
 							elm.onmouseover = function() {
 								clearTimeout(appSidebarFloatSubmenuTimeout);
@@ -233,7 +131,7 @@ function handleSidebarMinifyFloatMenu() {
 						} else {
 							var floatSubmenu = document.querySelector('.app-float-submenu');
 							var floatSubmenuElm = document.querySelector('.app-float-submenu');
-
+							
 							if (targetHeight > windowHeight) {
 								if (floatSubmenuElm) {
 									var splitClass = ('overflow-scroll mh-100vh').split(' ');
@@ -246,7 +144,7 @@ function handleSidebarMinifyFloatMenu() {
 							floatSubmenu.setAttribute('data-menu-offset-top', targetTop);
 							floatSubmenuElm.innerHTML = targetMenuHtml;
 						}
-
+				
 						var targetHeight = document.querySelector('.app-float-submenu').clientHeight;
 						var floatSubmenuElm = document.querySelector('.app-float-submenu');
 						if ((windowHeight - targetTop) > targetHeight) {
@@ -298,7 +196,7 @@ onMounted(() => {
 			menu.onclick = function(e) {
 				e.preventDefault();
 				var target = this.nextElementSibling;
-
+	
 				menus.map(function(m) {
 					var otherTarget = m.nextElementSibling;
 					if (otherTarget !== target) {
@@ -307,9 +205,9 @@ onMounted(() => {
 						otherTarget.closest('.menu-item').classList.add('closed');
 					}
 				});
-
+	
 				var targetItemElm = target.closest('.menu-item');
-
+			
 				if (targetItemElm.classList.contains('expand') || (targetItemElm.classList.contains('active') && !target.style.display)) {
 					targetItemElm.classList.remove('expand');
 					targetItemElm.classList.add('closed');
@@ -322,7 +220,7 @@ onMounted(() => {
 			}
 		});
 	};
-
+	
 	var menuBaseSelector = '.app-sidebar .menu > .menu-item.has-sub';
 	var submenuBaseSelector = ' > .menu-submenu > .menu-item.has-sub';
 
@@ -340,11 +238,10 @@ onMounted(() => {
 	var submenuLvl2Selector = menuBaseSelector + submenuBaseSelector + submenuBaseSelector;
 	var submenusLvl2 = [].slice.call(document.querySelectorAll(submenuLvl2Selector + ' > .menu-link'));
 	handleSidebarMenuToggle(submenusLvl2);
-
-
+	
+	
 	handleSidebarMinifyFloatMenu();
 });
-
 </script>
 <template>
 	<div id="sidebar" class="app-sidebar">
@@ -357,6 +254,7 @@ onMounted(() => {
 						<sidebar-nav v-if="menu.text" v-bind:menu="menu"></sidebar-nav>
 					</template>
 				</template>
+				
 			</div>
 		</perfect-scrollbar>
 		<button class="app-sidebar-mobile-backdrop" v-on:click="appSidebarMobileToggled"></button>

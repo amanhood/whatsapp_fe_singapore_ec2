@@ -1,6 +1,8 @@
 import axios from "axios";
 
 var BASE_LOGIN_URL = "http://localhost:8000/api/"
+//var BASE_LOGIN_URL = "http://54.169.241.146:8000/api/"
+
 
 export async function userRequest(path = null,payload){
   try {

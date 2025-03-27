@@ -26,7 +26,7 @@ import CardGroup from '@/assets/components/bootstrap/CardGroup.vue';
 import CardImgOverlay from '@/assets/components/bootstrap/CardImgOverlay.vue';
 import CardExpandToggler from '@/assets/components/bootstrap/CardExpandToggler.vue';
 import vue3Spinner from 'vue3-spinner';
-import { PaginationBar } from 'v-page'
+import { PaginationBar } from 'v-page';
 //import VueQuillEditor from 'vue-quill-editor';
 
 // require styles
@@ -52,9 +52,10 @@ app.component('VueBase64FileUpload', VueBase64FileUpload);
 app.use(createPinia());
 app.use(router);
 app.use(Vue3ProgressPlugin);
-app.use(PerfectScrollbar);
+//app.use(PerfectScrollbar);
 app.use(vue3Spinner)
 app.use(PaginationBar)
+
 
 app.config.globalProperties.emitter = emitter;
 app.mount('#app');

@@ -23,10 +23,10 @@ const props = defineProps(['cart_items'])
         <card-body class="text-body" v-for="item in props.cart_items">
           <div class="row align-items-center">
             <div class="col-lg-8 d-flex align-items-center">
-              <!-- <div class="h-65px w-65px d-flex align-items-center justify-content-center position-relative bg-white p-1">
-                <img src="/assets/img/product/product-1.jpg" alt="" class="mw-100 mh-100">
+              <div class="h-65px w-65px d-flex align-items-center justify-content-center position-relative bg-white p-1">
+                <img :src="item['image_url']" alt="" class="mw-100 mh-100">
                 <span class="w-20px h-20px p-0 d-flex align-items-center justify-content-center badge bg-theme text-theme-color position-absolute end-0 top-0 fw-bold fs-12px rounded-pill mt-n2 me-n2">1</span>
-              </div> -->
+              </div>
               <div class="ps-3 flex-1">
                 <div><a href="#" class="text-decoration-none text-body">{{item['product_name']}}</a></div>
               </div>

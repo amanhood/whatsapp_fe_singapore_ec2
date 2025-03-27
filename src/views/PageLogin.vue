@@ -77,7 +77,7 @@ export default {
 		<!-- BEGIN login-content -->
 		<div class="login-content">
 			<form v-on:submit.prevent="submitForm()" method="POST" name="login_form">
-				<h1 class="text-center">CloudMedia Business Solution Platform</h1>
+				<h1 class="text-center">Whatsapp Business Solution Platform</h1>
 				<div class="text-muted text-center mb-4">
 					Please Sign in
 				</div>
