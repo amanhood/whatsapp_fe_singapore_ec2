@@ -4,7 +4,7 @@ import { Handle } from "@vue-flow/core";
 import 'vue-select/dist/vue-select.css';
 
 
-defineProps({
+const props = defineProps({
   data: {
     type: Object,
     required: true,
@@ -16,23 +16,14 @@ defineProps({
 });
 
 
-const dropdownVisible = ref(false);
-const selectedOption = ref("");
-let select_options = [
-  {'key':'edit','value':'Edit'}
-]
+const emit = defineEmits(['open-edit-node', 'delete-node'])
 
-function toggleDropdown() {
-  dropdownVisible.value = !dropdownVisible.value;
-  console.log(dropdownVisible.value)
+function openEditModal() {
+  emit('open-edit-node', props.data);
 }
 
-function handleOptionChange() {
-  if (selectedOption.value.key === "edit") {
-    alert("Edit selected");
-    // Handle edit logic
-  } 
-  dropdownVisible.value = false; // Close dropdown after selection
+function handleDelete() {
+  emit('delete-node', props.data);
 }
 
 </script>
@@ -118,35 +109,6 @@ function handleOptionChange() {
   transform: translateY(-50%);
 }
 
-.three-dots {
-  cursor: pointer;
-  position: relative;
-  z-index: 2; /* Ensure clickable */
-}
-
-.dropdown-menu {
-  position: absolute;
-  right: 10px;
-  top: 30px;
-  background: white;
-  border: 1px solid #ccc;
-  border-radius: 4px;
-  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.2);
-  z-index: 10; /* Ensure it appears above other elements */
-  padding: 5px;
-  width: 150px;
-  display: block; /* Ensure it's visible */
-}
-
-.dropdown-menu select {
-  border: none;
-  padding: 5px;
-  width: 100%;
-  background: transparent;
-  cursor: pointer;
-}
-
-
 
 </style>
 
@@ -154,20 +116,13 @@ function handleOptionChange() {
     <div class="custom-node">
       <div class="node-header" :style="{ backgroundColor: color }">
         <span class="node-title">{{ data.title }}</span>
-        <span class="three-dots" @click="toggleDropdown">
-          <span class="material-icons">more_vert</span>
-        </span>
+        <div class="btn-group">
+          <button type="button" class="btn btn-default btn-sm" data-bs-toggle="modal" data-bs-target="#modalLg3" @click="openEditModal">edit</button>
+          <button type="button" class="btn btn-default btn-sm" @click="handleDelete" v-if="data.is_parent != 'yes'">delete</button>
+        </div>
       </div>
-      <!-- Dropdown Menu -->
       
-      <div
-        v-show="dropdownVisible"
-        class="dropdown-menu"
-        @click.stop
-      >
-        <v-select v-model="selectedOption" :options="select_options" label="value" @update:modelValue="handleOptionChange" placeholder="Select an option"></v-select>
-      </div>
-
+      
       <div class="node-content">
         <p>{{ data.message }}</p>
       </div>

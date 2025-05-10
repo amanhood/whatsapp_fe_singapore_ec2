@@ -57,6 +57,7 @@ async function getAutoReplyMessages(){
   }
 }
 
+
 function getReplyType(reply_type){
   if(reply_type == 'text_message'){
     return "Text"
@@ -151,16 +152,20 @@ checkWaba()
 								<th class="border-top-0 pt-0 pb-2">Message</th>
                 <th class="border-top-0 pt-0 pb-2">Type</th>
 								<th class="border-top-0 pt-0 pb-2">Update</th>
-								<th class="border-top-0 pt-0 pb-2">Delete</th>
 							</tr>
 						</thead>
 						<tbody>
 							<tr v-for="message in auto_reply_messages">
                 <td class="align-middle">{{ message.key }}</td>
-								<td class="align-middle">{{ message.message }}</td>
-                <td class="align-middle">{{ message.reply_type}}</td>
+                <template v-if="message.reply_type =='flow'">
+                  <td class="align-middle">{{ message.message }}</td>
+                  <td class="align-middle">{{ message.reply_type}}</td>
+                </template>
+                <template v-else>
+                  <td class="align-middle">{{ message.header }}</td>
+                  <td class="align-middle">Interactive Lists</td>
+                </template>
                 <td class="align-middle"><button type="button" class="btn btn-warning mb-1 me-1" @click="edit(message)">Edit</button></td>
-								<td class="align-middle"><button type="button" class="btn btn-danger mb-1 me-1">Delete</button></td>
               </tr>
 						</tbody>
 					</table>

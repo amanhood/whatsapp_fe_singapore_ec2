@@ -8,6 +8,7 @@ import "@vue-flow/core/dist/style.css";
 import "material-icons/iconfont/material-icons.css";
 import ButtonNode from "./ButtonNode.vue";
 import MessageNode from "./MessageNode.vue";
+import ListNode from "./ListNode.vue";
 import { getRequest,postRequest,deleteRequest,putRequest,formdataRequest } from '../composables/api.js'
 import { Toast } from 'bootstrap';
 import Loading from 'vue-loading-overlay';
@@ -28,6 +29,10 @@ let parent_id = ref(null)
 let isLoading = ref(false)
 token = sessionStorage.getItem("token")
 username = sessionStorage.getItem("username")
+let is_interactive_list_existed = ref(false)
+let is_autoreplymessage_existed = ref(false)
+let selected_node = ref(null)
+let selected_interactivelist = ref(null)
 
 onMounted(() => {
   if(state.message){
@@ -37,33 +42,49 @@ onMounted(() => {
       parent_id.value = existing_message.value.id
     }
     // generating nodes and messages with edges
-    if(existing_message.value){
-      console.log(existing_message.value)
-      nodeWithButtons(existing_message.value.id,existing_message.value.name,existing_message.value.message,existing_message.value.buttons,1)
-      if(existing_message.value.is_parent == 'yes'){
-        if(existing_message.value.children){
-          existing_message.value.children.forEach((item, index) => {
-            nodeWithButtons(item.id,item.name,item.message,item.buttons,index+2)
-          });
-        }
-      }
-    }
-    // generating node to node edge for parent node
-    if(existing_message.value.buttons.length > 0){
-      generateEdgeNodeToNode(existing_message.value.buttons)
-    }
-    // generating node to node edge for children
-    if(existing_message.value.children){
-      existing_message.value.children.forEach(item => {
-        if(item.buttons.length > 0){
-          generateEdgeNodeToNode(item.buttons)
-        }
-      })
-    }
+    generateStoryBoard()
   }
 });
 
-function generateEdgeNodeToNode(buttons){
+function generateStoryBoard(){
+  if(existing_message.value){
+    edges.value = []
+    if (existing_message.value && typeof existing_message.value === 'object' && 'reply_type' in existing_message.value){
+      nodeWithButtons(existing_message.value.id,existing_message.value.is_parent,existing_message.value.name,existing_message.value.message,existing_message.value.buttons,1)
+      if(existing_message.value.is_parent == 'yes'){
+        if(existing_message.value.children){
+          existing_message.value.children.forEach((item, index) => {
+            nodeWithButtons(item.id,item.is_parent,item.name,item.message,item.buttons,index+2)
+          });
+        }
+        if(existing_message.value.interactivelists){
+          existing_message.value.interactivelists.forEach((item,index)=>{
+            nodeWithList(item,index+3)
+          })
+        }
+      }
+      // generating node to node edge for parent node
+      if(existing_message.value.buttons.length > 0){
+        generateEdgeNode(existing_message.value.buttons)
+      }
+      // generating node to node edge for children
+      if(existing_message.value.children){
+        existing_message.value.children.forEach(item => {
+          if(item.buttons.length > 0){
+            generateEdgeNode(item.buttons)
+          }
+        })
+      }
+      is_autoreplymessage_existed.value = true
+    } else {
+      // it is interactive list
+      nodeWithList(existing_message.value,3)
+      is_interactive_list_existed.value = true
+    }
+  }  
+}
+
+function generateEdgeNode(buttons){
   buttons.forEach(item => {
     if(item.button_type == 'next_flow'){
       if(item.nodes.length > 0){
@@ -71,10 +92,14 @@ function generateEdgeNodeToNode(buttons){
           edgeNodeToNode(item.source_id,item.replybutton_id,item.autoreplymessage_id)
         })
       }
+      if(item.lists.length > 0){
+        item.lists.forEach(item => {
+          edgeNodeToList(item.source_id,item.replybutton_id,item.interactivelist_id)
+        })
+      }
     }
   });
 }
-
 
 const nodes = ref([])
 const edges = ref([])
@@ -87,29 +112,36 @@ let button_types = [
   {value:'image',label:'Image'},
   {value:'video',label:'Video'}
 ]
-let message_types = [
-  {value:'text',label:'Displaying text'},
-  {value:'url',label:'Go to url'},
-  {value:'document',label:'Document'},
-  {value:'image',label:'Image'},
-  {value:'video',label:'Video'}
-]
-let is_button = ref("no")
 let key = ref(null)
 let name = ref(null)
+let is_parent = ref(null)
 let message = ref(null)
 let message_type = ref(null)
 let buttons = ref([])
 let button_id = ref(1)
 let button_type = ref(null)
-// message only
-let text_message = ref(null)
-let url_header_text = ref(null)
-let url_body_text = ref(null)
-let url_footer_text = ref(null)
-let url_button_text = ref(null)
-let url = ref(null)
 let notification_message = ref(null)
+// interactive list
+let header = ref(null)
+let body = ref(null)
+let footer = ref(null)
+let button_text = ref(null)
+let section_id = ref(1)
+let row_id = ref(1)
+let sections = ref([
+  {
+    "section_id":section_id.value,
+    "title":"",
+    "rows":[
+      {
+        "id":row_id.value,
+        "title":"",
+        "description":""
+      }
+    ]
+  }
+])
+
 
 function checkLogin(){
   if(!token){
@@ -161,20 +193,25 @@ function getUniquePosition(id, number, isMessageNode = false, parentId = null) {
 
 
 function addButton(){
-  buttons.value.push({
-    'id':button_id.value,
-    'button_type':button_type.value,
-    'button_title':'',
-    'button_message':'',
-    'url_header_text':'',
-    'url_body_text':'',
-    'url_footer_text':'',
-    'url_button_text':'',
-    'url':'',
-    'file':'',
-    'media_id':''
-  })
-  button_id.value += 1
+  if(buttons.value.length < 3){
+    buttons.value.push({
+      'id':button_id.value,
+      'button_type':button_type.value,
+      'title':'',
+      'button_text':'',
+      'url_header_text':'',
+      'url_body_text':'',
+      'url_footer_text':'',
+      'url_button_text':'',
+      'url':'',
+      'file':'',
+      'media_id':''
+    })
+    button_id.value += 1
+  } else {
+    let response_message = "3 buttons are maximum"
+    showToast(response_message)
+  }
 }
 
 function deleteButton(button_id){
@@ -185,7 +222,7 @@ function deleteButton(button_id){
     button_type.value = null
 }
 
-// Event handlers
+//Event handlers
 // const onNodesChange = (changes) => {
 //   console.log("Nodes changed:", changes);
 // };
@@ -193,39 +230,159 @@ function deleteButton(button_id){
 const onEdgesChange = (changes) => {
   changes.forEach(change => {
     if (change.type === 'remove') {
-      console.log("Edge deleted:", change);
+      //console.log("Edge deleted:", change);
       var source_id = change.source.split("-")[1]
       var replybutton_id = change.sourceHandle.split("-")[1]
-      var target_id = change.target.split("-")[1]
+      var target = change.target.split("-")
       // delete edge for node to node. 
-      if(change.targetHandle == 'target-handle'){
-        deleteEdgeNodeToNodeRelationship(source_id,replybutton_id,target_id)
+      if(target[0] == 'message'){
+        if(change.targetHandle == 'target-handle'){
+          deleteEdgeNodeToNodeRelationship(source_id,replybutton_id,target[1])
+        }
+      } else {
+        if(change.targetHandle == 'target-handle'){
+          deleteEdgeNodeToListRelationship(source_id,replybutton_id,target[1])
+        }
       }
     }
   });
 };
 
 const onConnect = async (connection) => {
-  edges.value.push({
-    ...connection,
-    id: `e${connection.source}-${connection.target}`,
-  });
+  console.log(connection)
   let source = connection.source
-  let sourceHandle = connection.sourceHandle
   let target = connection.target
-  let targetHandle = connection.targetHandle
-  let source_node = await getNode(source)
-  let target_node = await getNode(target)
-  source_node = (JSON.parse(source_node))
-  target_node = (JSON.parse(target_node))
-  if(source_node['reply_type'] == 'flow' && target_node['reply_type'] == 'flow'){
-    let source_button_id = sourceHandle.split("-")[1]
-    let source_id = source_node['id']
-    let target_id = target_node['id']
-    // set node to node connection at database
-    CreateNodeToNodeRelationship(source_id,source_button_id,target_id)
-  } 
+  let source_button_id = null
+  let target_button_id = null
+  let source_interactivelist_id = null
+  let target_interactivelist_id = null
+  let source_response = null
+  let target_response = null
+
+  if(connection.source.split('-')[0] == 'list'){
+    source_interactivelist_id = connection.source.split("-")[1]
+    source_response = await checkEdgesLists(source_interactivelist_id)
+    // check target is list or node, and not a url / text
+    if (connection.target.split('-')[0] == 'message'){
+      target_button_id = connection.targetHandle.split("-")[1]
+      target_response = await checkEdges(target_button_id)
+    } else {
+      // list can not be linked with each other, so must return 400
+      target_response = {}
+      target_response['data'] = {}
+      target_response['data']['status'] = 400
+      target_response['data']['message'] = "Interactive Lists can not be linked with each other"
+    }
+    // connecting list with node
+    if(source_response['data']['status'] == 200 && target_response['data']['status'] == 200){
+      edges.value.push({
+        ...connection,
+        id: `e${connection.source}-${connection.target}`,
+      });
+      let interactivelist = JSON.parse(await getInteractiveList(source_interactivelist_id))
+      let interactivelist_id = interactivelist['id']
+      let node = JSON.parse(await getNode(target))
+      let node_id = node['id']
+      CreateNodetoListRelationship(node_id,target_button_id,interactivelist_id)
+    } else {
+      let response_message = null
+      if (source_response['data']['status'] == 400){
+        response_message = source_response['data']['message']
+      } else if(target_response['data']['status'] == 400){
+        response_message = target_response['data']['message']
+      }
+      showToast(response_message)
+    }
+  } else if (connection.source.split('-')[0] == 'message'){
+    source_button_id = connection.sourceHandle.split("-")[1]
+    source_response = await checkEdges(source_button_id)
+    // check target is list or node
+    if (connection.target.split('-')[0] == 'message'){ // node
+      target_button_id = connection.targetHandle.split("-")[1]
+      target_response = await checkEdges(target_button_id)
+      let source_node = JSON.parse(await getNode(source))
+      let target_node = JSON.parse(await getNode(target))
+      let source_id = source_node['id']
+      let target_id = target_node['id']
+      if(source_response['data']['status'] == 200 && target_response['data']['status'] == 200){
+        edges.value.push({
+          ...connection,
+          id: `e${connection.source}-${connection.target}`,
+        });
+        let source_button = await getButton(source_button_id)
+        let target_button = await getButton(target_button_id)
+        if (source_button.button_type != 'next_flow' && target_button.button_type != 'next_flow'){
+          let response_message = "Buttons can not be linked each other"
+          showToast(response_message)
+        } else if (source_button.button_type != 'next_flow'){
+          let response_message = "You should use 'next flow' button to link other message or list"
+          showToast(response_message)
+        } else {
+          // set node to node connection at database
+          CreateNodeToNodeRelationship(source_id,source_button_id,target_id)
+        }
+      } else {
+        let response_message = null
+        if (source_response['data']['status'] == 400){
+          response_message = source_response['data']['message']
+        } else if(target_response['data']['status'] == 400){
+          response_message = target_response['data']['message']
+        }
+        showToast(response_message)
+      }
+    } else if(connection.target.split('-')[0] == 'list') { // list
+      target_interactivelist_id = connection.target.split("-")[1]
+      target_response = await checkEdgesLists(target_interactivelist_id)
+      if(source_response['data']['status'] == 200 && target_response['data']['status'] == 200){
+        edges.value.push({
+          ...connection,
+          id: `e${connection.source}-${connection.target}`,
+        });
+        let interactivelist = JSON.parse(await getInteractiveList(target_interactivelist_id))
+        let interactivelist_id = interactivelist['id']
+        let node = JSON.parse(await getNode(source))
+        let node_id = node['id']
+        CreateNodetoListRelationship(node_id,source_button_id,interactivelist_id)
+      } else {
+        let response_message = null
+        if (source_response['data']['status'] == 400){
+          response_message = source_response['data']['message']
+        } else if(target_response['data']['status'] == 400){
+          response_message = target_response['data']['message']
+        }
+        showToast(response_message)
+      }
+    } else { // it is url / text
+      let response_message = "Node can not link to Text / Url Directly"
+      showToast(response_message)
+    }
+  }
 };
+
+async function checkEdges(button_id){
+  let payload = {}
+  payload['button_id'] = button_id
+  let response = await postRequest("check_edges",payload,token)
+  if(response.request.status == 200){
+    return response
+  } else {
+    let response_message = "failed to check edges"
+    showToast(response_message)
+  }
+}
+
+async function checkEdgesLists(target_interactivelist_id){
+  let payload = {}
+  payload['interactivelist_id'] = target_interactivelist_id
+  let response = await postRequest("check_edges_list",payload,token)
+  if(response.request.status == 200){
+    return response
+  } else {
+    let response_message = "failed to check edges"
+    showToast(response_message)
+  }
+}
+
 
 async function deleteEdgeNodeToNodeRelationship(source_id,source_button_id,target_id){
   let payload = {}
@@ -244,6 +401,22 @@ async function deleteEdgeNodeToNodeRelationship(source_id,source_button_id,targe
   }
 }
 
+async function deleteEdgeNodeToListRelationship(source_id,source_button_id,target_id){
+  let payload = {}
+  payload['button_id'] = source_button_id
+  payload['interactivelist_id'] = target_id
+  payload['source_id'] = source_id
+  let response = await postRequest("delete_node_to_list_relationship",payload,token)
+  if(response.request.status == 200){
+    if(response['data']['status']){
+      getParentNodeWithChildren()
+    }
+  } else {
+    let response_message = "failed to delete Node to Node relationship"
+    showToast(response_message)
+  }
+}
+
 async function CreateNodeToNodeRelationship(source_id,source_button_id,target_id){
   let payload = {}
   payload['button_id'] = source_button_id
@@ -251,7 +424,6 @@ async function CreateNodeToNodeRelationship(source_id,source_button_id,target_id
   payload['source_id'] = source_id
   let response = await postRequest("create_node_to_node_relationship",payload,token)
   if(response.request.status == 200){
-    console.log(response)
     let response_message = response['data']['message']
     showToast(response_message)
     if(response['data']['success'] == true){
@@ -264,17 +436,48 @@ async function CreateNodeToNodeRelationship(source_id,source_button_id,target_id
   }
 }
 
+async function CreateNodetoListRelationship(source_id,source_button_id,target_id){
+  let payload = {}
+  payload['button_id'] = source_button_id
+  payload['target_id'] = target_id
+  payload['source_id'] = source_id
+  let response = await postRequest("create_node_to_list_relationship",payload,token)
+  if(response.request.status == 200){
+    let response_message = response['data']['message']
+    showToast(response_message)
+    if(response['data']['success'] == true){
+      edgeNodeToList(source_id,source_button_id,target_id)
+      getParentNodeWithChildren()
+    }
+  } else {
+    let response_message = "failed to create Node to Node relationship"
+    showToast(response_message)
+  }
+}
+
+function edgeNodeToList(source_id,button_id,target_id){
+  let source = "message-"+source_id
+  let target = "list-"+target_id
+  let source_handle = "button-"+button_id+"-source"
+  let target_handle = "target-handle"
+  let edgeId = "node-"+source_id+"-target-"+target+"-node-to-list"
+  createEdge(edgeId,source,source_handle,target,target_handle)
+}
+
 function edgeNodeToNode(source_id,button_id,target_id){
   let source = "message-"+source_id
   let target = "message-"+target_id
   let source_handle = "button-"+button_id+"-source"
-  let edgeId = "message-"+source_id+"target-"+target+"node-to-node"
+  let target_handle = "target-handle"
+  let edgeId = "message-"+source_id+"-target-"+target+"-node-to-node"
+  createEdge(edgeId,source,source_handle,target,target_handle)
+}
 
+function createEdge(edgeId,source,source_handle,target,target_handle){
   if (edges.value.some(edge => edge.id === edgeId)) {
     console.warn("Edge already exists:", edgeId);
     return;
   }
-
   edges.value = [
     ...edges.value,
     {
@@ -282,7 +485,7 @@ function edgeNodeToNode(source_id,button_id,target_id){
       source: source,         // ButtonNode ID
       sourceHandle: source_handle, // Connects to the first button's handle
       target: target,
-      targetHandle: "target-handle",
+      targetHandle: target_handle,
       type: 'smoothstep', // Edge type
       style: {
         stroke: '#007bff', // Edge color
@@ -297,7 +500,6 @@ function edgeNodeToNode(source_id,button_id,target_id){
       }
     }
   ]
-
 }
 
 async function getNode(data){
@@ -312,6 +514,30 @@ async function getNode(data){
   }
 }
 
+async function getButton(data){
+  let payload = {}
+  payload['button_id'] = data
+  let response = await postRequest("get_button",payload,token)
+  if(response.request.status == 200){
+    return response['data']
+  } else {
+    let response_message = "failed to get message record"
+    showToast(response_message)
+  }
+}
+
+async function getInteractiveList(data){
+  let payload = {}
+  payload['data'] = data
+  let response = await postRequest("get_inetractive_list",payload,token)
+  if(response.request.status == 200){
+    return response['data']
+  } else {
+    let response_message = "failed to get interactive list"
+    showToast(response_message)
+  }
+}
+
 async function getParentNodeWithChildren(){
   let payload = {}
   payload['id'] = JSON.parse(state.message).id
@@ -321,6 +547,8 @@ async function getParentNodeWithChildren(){
       let response_message = "Nodes are fetching now"
       showToast(response_message)
       state.message = JSON.stringify(response['data']['data'])
+      existing_message.value = response['data']['data']
+      generateStoryBoard()
     } else {
       let response_message = "failed to get auto reply messages"
       showToast(response_message)
@@ -332,7 +560,7 @@ async function getParentNodeWithChildren(){
 }
 
 
-const nodeTypes = { buttonNode: ButtonNode, messageNode: MessageNode }; // Register custom node
+const nodeTypes = { buttonNode: ButtonNode, messageNode: MessageNode, listNode:ListNode }; // Register custom node
 
 async function createMessageWithButtons(){
   let response_message = null
@@ -355,25 +583,26 @@ async function createMessageWithButtons(){
   }
   let id = null
   let response = await postRequest("create_auto_reply_message",payload,token)
-  if(response.request.status == 200){
+  if(response['data']['status'] == "success"){
     //response_message = "created auto reply messages"
     id = response['data']['data']['id']
     name = response['data']['data']['name']
+    is_parent = response['data']['data']['is_parent']
     message = response['data']['data']['message']
     buttons = response['data']['data']['buttons']
     if(!parent_id.value){
       parent_id.value = id
     } 
     //showToast(response_message)
-    nodeWithButtons(id,name,message,buttons,0)
+    nodeWithButtons(id,is_parent,name,message,buttons,0)
     getParentNodeWithChildren
   } else {
-    response_message = "failed to create auto reply messages"
+    response_message = response['data']['data']
     showToast(response_message)
   }
 }
 
-function nodeWithButtons(id,name,message,buttons,node_number){
+function nodeWithButtons(id,is_parent,name,message,buttons,node_number){
   let position = getUniquePosition(id,node_number)
   let options = []
   if(buttons.length > 0){
@@ -404,7 +633,9 @@ function nodeWithButtons(id,name,message,buttons,node_number){
       id: `message-${id}`,
       type: "buttonNode",
       data: {
+        id:id,
         title: name,
+        is_parent:is_parent,
         message: message,
         options: options,
       },
@@ -464,6 +695,34 @@ function nodewithMessage(id,button,message_number){
   ];
 }
 
+function nodeWithList(item,node_number){
+  let position = getUniquePosition(item.id,node_number)
+  let options = []
+  if(item.sections.length > 0){
+    item.sections.forEach((section,index) => {
+      options.push({title:section.title,id:section.id,rows:section.rows})
+    });
+  }
+  nodes.value = [
+    ...nodes.value,
+    {
+      id: `list-${item.id}`,
+      type: "listNode",
+      data: {
+        id:item.id,
+        title: "Interactive List",
+        header:item.header,
+        body:item.body,
+        footer:item.footer,
+        is_parent:item.is_parent,
+        button_text:item.button_text,
+        sections: options,
+      },
+      position: position,
+    },
+  ];
+}
+
 function edgeNodeToMessage(parent_message_id,button_id){
   let source = "message-"+parent_message_id
   let target = "button-"+button_id
@@ -491,27 +750,6 @@ function edgeNodeToMessage(parent_message_id,button_id){
   ]
 }
 
-function createMessageOnly(){
-  let node_message = null
-  if(message_type.value == 'text'){
-    node_message = text_message.value
-  } else {
-    node_message = url_body_text.value
-  }
-  let position = getUniquePosition(id)
-  nodes.value = [
-    ...nodes.value,
-    {
-      id: `button-${node_id.value}`,
-      type: "messageNode",
-      data: {
-        title: name.value,
-        message: node_message
-      },
-      position: position,
-    },
-  ];
-}
 
 function getType(button_type){
   if(button_type=='text') {
@@ -529,16 +767,6 @@ function getType(button_type){
   }
 }
 
-
-
-function setIsButtonTrue(){
-  is_button.value = "yes"
-}
-
-function setIsButtonFalse(){
-  is_button.value = "no"
-}
-
 function showToast(response_message) {
   //event.preventDefault();
   var toast = new Toast(document.getElementById('toast-1'));
@@ -546,20 +774,24 @@ function showToast(response_message) {
   toast.show();
 }
 
-async function uploadFile(event,button_id){
+async function uploadFile(event,button_id,type){
   isLoading.value = true
-  const button = buttons.value.find((btn) => btn.id === button_id)
+  let button = null 
+  if(type=='create'){
+    button = buttons.value.find((btn) => btn.id === button_id)
+  } else if(type=="change") {
+    button = selected_node.value.buttons.find((btn) => btn.id === button_id)
+    console.log(button)
+  }
   const formData = new FormData();
   formData.append("file", event.target.files[0]);
   formData.append("waba_id", selected_waba_account.value);    
   formData.append("phone_number_id", selected_phone_number_id.value);    
   let response = await formdataRequest("upload_file_to_wasabi",formData,token)
-  console.log(response)
   if (response.status === 200) {
     if(response['data']['status_code'] == 200){
       let media_id = response['data']['message']
       button['media_id'] = media_id
-      console.log(buttons.value)
       isLoading.value = false
       showToast("File uploaded & sent to WhatsApp successfully!");
     } else {
@@ -571,6 +803,244 @@ async function uploadFile(event,button_id){
     showToast("Error uploading file!");
   }
 }
+
+function addSection(){
+  section_id.value += 1
+  row_id.value += 1
+  sections.value.push({
+    "section_id":section_id.value,
+    "title":"",
+    "rows":[
+      {
+        "id":row_id.value,
+        "title":"",
+        "description":""
+      }
+    ]
+  })
+}
+
+function deleteSection(selected_section_id){
+  if(sections.value.length > 1){
+    const index = sections.value.findIndex(item => item.section_id === selected_section_id)
+    if (index !== -1) {
+      sections.value.splice(index, 1)
+    }
+  } else {
+    showToast("Interactive list message must contain one section at least");
+  }
+}
+
+function addRow(selected_section_id){
+  var section = sections.value.find(section => section.section_id === selected_section_id)
+  if (section.rows.length < 11){
+    row_id.value += 1
+    section.rows.push({
+        "id":row_id.value,
+        "title":"",
+        "description":""
+    })
+  } else {
+    showToast("Maximum 10 rows is allowed");
+  }
+}
+
+function deleteRow(section_id,row_id){
+  const section = sections.value.find(s => s.section_id === section_id);
+  if (!section) {
+    showToast("Section can not be found");
+  }
+  if (section.rows.length <= 1) {
+    showToast("There is only one row at section, it can not be deleted");
+  } else {
+    section.rows = section.rows.filter(row => row.id !== row_id);
+  }
+}
+
+async function createInteractiveList(){
+  let payload = {}
+  payload['waba_id'] = selected_waba_account.value
+  payload['phone_number_id'] = selected_phone_number_id.value
+  payload['display_phone_number'] = selected_phone_number.value
+  payload['key'] = key.value
+  payload['header'] = header.value
+  payload['body'] = body.value
+  payload['footer'] = footer.value
+  payload['button_text'] = button_text.value
+  payload['sections'] = sections.value
+  if(parent_id.value){
+    payload['is_parent'] = "no"
+    payload['parent_id'] = parent_id.value
+  } else {
+    payload['is_parent'] = "yes"
+    payload['parent_id'] = parent_id.value
+  }
+  let response = await postRequest("create_interactive_list",payload,token)
+  if(response['data']['status'] == "success"){
+    let response_message = "Interactive List is created"
+    showToast(response_message)
+    nodeWithList(response['data']['data'],4)
+    getParentNodeWithChildren
+
+  } else {
+    let response_message = response['data']['message']
+    showToast(response_message)
+  }
+}
+
+function generate_random_number(){
+  const randomSixDigit = Math.floor(100000 + Math.random() * 900000); // Generates 6-digit number
+  const currentDate = new Date().toISOString().slice(0, 10).replace(/-/g, ''); // Format: YYYYMMDD
+  const result = `${randomSixDigit}${currentDate}`;
+  return result
+}
+
+async function EditNode(data){
+  selected_node.value = JSON.parse(await getNode("message-"+data['id']))
+}
+
+function editButton(){
+  if(selected_node.value.buttons.length < 3){
+    const random_generated_id = generate_random_number()
+    selected_node.value.buttons.push({
+        'id':random_generated_id,
+        'button_type':button_type.value,
+        'url_header_text':'',
+        'url_body_text':'',
+        'url_footer_text':'',
+        'url_button_text':'',
+        'url':'',
+        'file':'',
+        'media_id':'',
+        'title':'',
+        'button_text':''
+      })
+  } else {
+    let response_message = "3 buttons are maximum"
+    showToast(response_message)
+  }
+}
+
+function deleteExistedButton(button_id){
+  if(selected_node.value.buttons.length > 1){
+    const index = selected_node.value.buttons.findIndex(item => item.id === button_id)
+    if (index !== -1) {
+      selected_node.value.buttons.splice(index, 1)
+    }
+  } else {
+    let response_message = "Node must contain 1 button at least"
+    showToast(response_message)
+  }
+}
+
+async function editNodeWithButtons(){
+  let payload = selected_node.value
+  let response = await postRequest("update_autoreplymessage",payload,token)
+  if(response['data']['status'] == 200){
+    let response_message = response['data']['message']
+    showToast(response_message)
+    getParentNodeWithChildren()
+  } else {
+    let response_message = response['data']['message']
+    showToast(response_message)
+  }
+}
+
+function EditList(data){
+  selected_interactivelist.value = data
+}
+
+function deleteExistingRow(section_id,row_id){
+  const section = selected_interactivelist.value.sections.find(s => s.id === section_id);
+  if (!section) {
+    showToast("Section can not be found");
+  }
+  if (section.rows.length <= 1) {
+    showToast("There is only one row at section, it can not be deleted");
+  } else {
+    section.rows = section.rows.filter(row => row.id !== row_id);
+  }
+}
+
+function addExistingRow(section_id){
+  var section = selected_interactivelist.value.sections.find(section => section.id === section_id)
+  const random_generated_id = generate_random_number()
+  if (section.rows.length < 11){
+    section.rows.push({
+        "id":random_generated_id,
+        "title":"",
+        "description":""
+    })
+  } else {
+    showToast("Maximum 10 rows is allowed");
+  }
+}
+
+function deleteExistingSection(section_id){
+  if(selected_interactivelist.value.sections.length > 1){
+    const index = selected_interactivelist.value.sections.findIndex(item => item.id === section_id)
+    if (index !== -1) {
+      selected_interactivelist.value.sections.splice(index, 1)
+    }
+  } else {
+    showToast("Interactive list message must contain one section at least");
+  }
+}
+
+function addExistngSection(){
+  const random_generated_id = generate_random_number()
+  selected_interactivelist.value.sections.push({
+    "id":random_generated_id,
+    "title":"",
+    "rows":[
+      {
+        "id":random_generated_id,
+        "title":"",
+        "description":""
+      }
+    ]
+  })
+}
+
+async function editInteractiveList(){
+  let payload = selected_interactivelist.value
+  let response = await postRequest("update_interactivelist",payload,token)
+  if(response['data']['status'] == 200){
+    let response_message = response['data']['message']
+    showToast(response_message)
+    getParentNodeWithChildren()
+  } else {
+    let response_message = response['data']['message']
+    showToast(response_message)
+  }
+}
+
+async function handleDeleteNode(data){
+  let payload = data
+  let response = await postRequest("delete_autoreplymessage",payload,token)
+  if(response['data']['status'] == 200){
+    let response_message = response['data']['message']
+    showToast(response_message)
+    getParentNodeWithChildren()
+  } else {
+    let response_message = response['data']['message']
+    showToast(response_message)
+  }
+}
+
+async function handleDeleteList(data){
+  let payload = data
+  let response = await postRequest("delete_interactivelist",payload,token)
+  if(response['data']['status'] == 200){
+    let response_message = response['data']['message']
+    showToast(response_message)
+    getParentNodeWithChildren()
+  } else {
+    let response_message = response['data']['message']
+    showToast(response_message)
+  }
+}
+
 
 checkLogin()
 
@@ -584,6 +1054,13 @@ checkLogin()
   width: 100%;
   position: relative;
   overflow: hidden; /* Ensure no unexpected scroll */
+}
+
+.toasts-container {
+  position: fixed;
+  top: 20px;
+  right: 20px;
+  z-index: 9999; /* make this higher than modals/popups */
 }
 
 </style>
@@ -607,40 +1084,120 @@ checkLogin()
     </div>
   </div>
 
-  <div class="modal fade" id="modalLg">
+  <div class="modal fade" id="modalLg4">
     <div class="modal-dialog modal-lg">
       <div class="modal-content">
         <div class="modal-header">
-          <h5 class="modal-title">Message with flow actions</h5>
+          <h5 class="modal-title">Edit Interactive List</h5>
           <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
         </div>
 
-        <div class="modal-body">
+        <div class="modal-body" v-if="selected_interactivelist">
             <div class="row">
               <div class="col-xl-6">
                 <div class="form-group mb-3">
-                  <label class="form-label" for="exampleFormControlSelect1" style="font-weight:normal;">Key</label>
-                  <input type="text" class="form-control" placeholder="" v-model="key" required/>
+                  <label class="form-label" for="exampleFormControlSelect1" style="font-weight:normal;">header</label>
+                  <input type="text" class="form-control" placeholder="" v-model="selected_interactivelist.header"/>
                 </div>
                 <div class="form-group mb-3">
-                  <label class="form-label" for="exampleFormControlSelect1" style="font-weight:normal;">Name</label>
-                  <input type="text" class="form-control" placeholder="" v-model="name" required/>
+                  <label class="form-label" for="exampleFormControlSelect1" style="font-weight:normal;">body</label>
+                  <input type="text" class="form-control" placeholder="" v-model="selected_interactivelist.body"/>
                 </div>
                 <div class="form-group mb-3">
-                  <label class="form-label" for="exampleFormControlSelect1" style="font-weight:normal;">Message</label>
-                  <textarea class="form-control" id="exampleFormControlTextarea1" rows="3" v-model="message" placeholder="" required></textarea>
+                  <label class="form-label" for="exampleFormControlSelect1" style="font-weight:normal;">footer</label>
+                  <input type="text" class="form-control" placeholder="" v-model="selected_interactivelist.footer"/>
                 </div>
-                
-                <div class="form-group mb-3" v-if="is_button =='yes'">
-                  <label class="form-label" for="exampleFormControlSelect1" style="font-weight:normal;">Button Types</label>
-                  <v-select v-model="button_type" :options="button_types" label="label" :reduce="loc => loc.value" @update:modelValue="addButton" required></v-select>
+                <div class="form-group mb-3">
+                  <label class="form-label" for="exampleFormControlSelect1" style="font-weight:normal;">Text displayed on button</label>
+                  <input type="text" class="form-control" placeholder="" maxlength="20" v-model="selected_interactivelist.button_text"/>
+                </div>
+                <div class="form-group mb-3">
+                  <button type="button" class="btn btn-teal me-2" @click="addExistngSection()">Add section</button>
                 </div>
               </div>
             </div>
             <div class="row">
-              <hr style="color:black;" v-if="is_button =='yes'">
-              <div class="col-xl-12" v-for="button in buttons">
-                <fragment v-if="is_button =='yes'">
+              <hr style="color:black;">
+              <div class="col-xl-12" v-for="section in selected_interactivelist.sections">
+                
+                <div class="form-group mb-3">
+                  <label class="form-label" for="exampleFormControlSelect1" style="font-weight:normal;"><b>Section Title</b></label>
+                  <input type="text" class="form-control" placeholder="" maxlength="20" v-model="section.title"/>
+                </div>
+
+                <div class="form-group mb-3">
+                  <button type="button" class="btn btn-lime me-2" @click="addExistingRow(section.id)">Add Row</button>
+                </div>
+               
+                <fragment v-for="row in section.rows">
+                  <div class="form-group mb-3">
+                    <label class="form-label" for="exampleFormControlSelect1" style="font-weight:normal;">Row Title</label>
+                    <input type="text" class="form-control" placeholder="" maxlength="20" v-model="row.title"/>
+                  </div>
+                  <div class="form-group mb-3">
+                    <label class="form-label" for="exampleFormControlSelect1" style="font-weight:normal;">Row Description</label>
+                    <input type="text" class="form-control" placeholder="" maxlength="20" v-model="row.description"/>
+                  </div>
+                  <div class="form-group mb-3">
+                    <button type="button" class="btn btn-danger" @click="deleteExistingRow(section.id,row.id)">Delete Row</button>
+                  </div>
+                  <hr style="color:#90ca4b;">
+                </fragment>
+                <div class="form-group mb-3">
+                  <button type="button" class="btn btn-danger" @click="deleteExistingSection(section.id)">Delete Section</button>
+                </div>
+                <hr style="color:black;">
+              </div>
+            </div>
+            
+            <div class="row" style="margin-top:20px;">
+                <div class="col-xl-6">
+                  <div class="form-group mb-3">
+                    <button type="button" class="btn btn-teal" @click="editInteractiveList">Edit</button>
+                  </div>
+                </div>
+            </div>
+        </div>
+        
+        <div class="modal-footer">
+          <button type="button" class="btn btn-yellow" data-bs-dismiss="modal" id="deleteCatalogModal">Close</button>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <div class="modal fade" id="modalLg3">
+    <div class="modal-dialog modal-lg">
+      <div class="modal-content">
+        <div class="modal-header">
+          <h5 class="modal-title">Edit Node</h5>
+          <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+        </div>
+
+        <div class="modal-body" v-if="selected_node">
+            <div class="row">
+              <div class="col-xl-6">
+                <div class="form-group mb-3">
+                  <label class="form-label" for="exampleFormControlSelect1" style="font-weight:normal;">Key</label>
+                  <input type="text" class="form-control" placeholder="" v-model="selected_node.key" required/>
+                </div>
+                <div class="form-group mb-3">
+                  <label class="form-label" for="exampleFormControlSelect1" style="font-weight:normal;">Name</label>
+                  <input type="text" class="form-control" placeholder="" v-model="selected_node.name" required/>
+                </div>
+                <div class="form-group mb-3">
+                  <label class="form-label" for="exampleFormControlSelect1" style="font-weight:normal;">Message</label>
+                  <textarea class="form-control" id="exampleFormControlTextarea1" rows="3" v-model="selected_node.message" placeholder="" required></textarea>
+                </div>
+                <div class="form-group mb-3">
+                  <label class="form-label" for="exampleFormControlSelect1" style="font-weight:normal;">Button Types</label>
+                  <v-select v-model="button_type" :options="button_types" label="label" :reduce="loc => loc.value" @update:modelValue="editButton" required></v-select>
+                </div>
+              </div>
+            </div>
+              <div class="row">
+                <hr style="color:black;">
+                <div class="col-xl-12" v-for="button in selected_node.buttons">
                   <fragment v-if="button.button_type =='text'">
                     <div class="form-group mb-3">
                       <label class="form-label" for="exampleFormControlSelect1" style="font-weight:normal;">
@@ -649,14 +1206,14 @@ checkLogin()
                     </div>
                     <div class="form-group mb-3">
                       <label class="form-label" for="exampleFormControlSelect1" style="font-weight:normal;">Title</label>
-                      <input type="text" class="form-control" placeholder="" maxlength="20" v-model="button.button_title"/>
+                      <input type="text" class="form-control" placeholder="" maxlength="20" v-model="button.title"/>
                     </div>
                     <div class="form-group mb-3">
                       <label class="form-label" for="exampleFormControlSelect1" style="font-weight:normal;">Message</label>
-                      <input type="text" class="form-control" placeholder="" v-model="button.button_message"/>
+                      <input type="text" class="form-control" placeholder="" v-model="button.button_text"/>
                     </div>
                     <div class="form-group mb-3">
-                      <button type="button" class="btn btn-danger" @click="deleteButton(button.id)">Delete</button>
+                      <button type="button" class="btn btn-danger" @click="deleteExistedButton(button.id)">Delete</button>
                     </div>
                     <hr style="color:#e6180d;">
                   </fragment>
@@ -688,7 +1245,7 @@ checkLogin()
                       <input type="text" class="form-control" placeholder="" maxlength="20" v-model="button.url_button_text"/>
                     </div>
                     <div class="form-group mb-3">
-                      <button type="button" class="btn btn-danger" @click="deleteButton(button.id)">Delete</button>
+                      <button type="button" class="btn btn-danger" @click="deleteExistedButton(button.id)">Delete</button>
                     </div>
                     <hr style="color:#e6180d;">
                   </fragment>
@@ -701,14 +1258,14 @@ checkLogin()
                     </div>
                     <div class="form-group mb-3">
                       <label class="form-label" for="exampleFormControlSelect1" style="font-weight:normal;">Title</label>
-                      <input type="text" class="form-control" placeholder="" maxlength="20" v-model="button.button_title"/>
+                      <input type="text" class="form-control" placeholder="" maxlength="20" v-model="button.title"/>
                     </div>
                     <div class="form-group mb-3">
                       <label class="form-label" for="exampleFormControlSelect1" style="font-weight:normal;">Message</label>
-                      <input type="text" class="form-control" placeholder="" v-model="button.button_message"/>
+                      <input type="text" class="form-control" placeholder="" v-model="button.button_text"/>
                     </div>
                     <div class="form-group mb-3">
-                      <button type="button" class="btn btn-danger" @click="deleteButton(button.id)">Delete</button>
+                      <button type="button" class="btn btn-danger" @click="deleteExistedButton(button.id)">Delete</button>
                     </div>
                     <hr style="color:#e6180d;">
                   </fragment>
@@ -723,16 +1280,21 @@ checkLogin()
 
                     <div class="form-group mb-3">
                       <label class="form-label" for="exampleFormControlSelect1" style="font-weight:normal;">Title</label>
-                      <input type="text" class="form-control" placeholder="" maxlength="20" v-model="button.button_title"/>
+                      <input type="text" class="form-control" placeholder="" maxlength="20" v-model="button.title"/>
+                    </div>
+
+                    <div class="form-group mb-3" v-if="button.media_id">
+                      <label class="form-label" for="exampleFormControlSelect1" style="font-weight:normal;">Media</label>
+                      {{button.media_id}}
                     </div>
 
                     <div class="form-group mb-3">
-                      <input type="file" class="form-control" id="defaultFile" @change="uploadFile($event,button.id)" accept="application/pdf"/>
+                      <input type="file" class="form-control" id="defaultFile" @change="uploadFile($event,button.id,'change')" accept="application/pdf"/>
                     </div>
                     
                     
                     <div class="form-group mb-3">
-                      <button type="button" class="btn btn-danger" @click="deleteButton(button.id)">Delete</button>
+                      <button type="button" class="btn btn-danger" @click="deleteExistedButton(button.id)">Delete</button>
                     </div>
                     <hr style="color:#e6180d;">
                   </fragment>
@@ -747,16 +1309,21 @@ checkLogin()
 
                     <div class="form-group mb-3">
                       <label class="form-label" for="exampleFormControlSelect1" style="font-weight:normal;">Title</label>
-                      <input type="text" class="form-control" placeholder="" maxlength="20" v-model="button.button_title"/>
+                      <input type="text" class="form-control" placeholder="" maxlength="20" v-model="button.title"/>
+                    </div>
+
+                    <div class="form-group mb-3" v-if="button.media_id">
+                      <label class="form-label" for="exampleFormControlSelect1" style="font-weight:normal;">Media</label>
+                      {{button.media_id}}
                     </div>
 
                     <div class="form-group mb-3">
-                      <input type="file" class="form-control" id="defaultFile" @change="uploadFile($event,button.id)" accept="image/*"/>
+                      <input type="file" class="form-control" id="defaultFile" @change="uploadFile($event,button.id,'change')" accept="image/*"/>
                     </div>
                     
                     
                     <div class="form-group mb-3">
-                      <button type="button" class="btn btn-danger" @click="deleteButton(button.id)">Delete</button>
+                      <button type="button" class="btn btn-danger" @click="deleteExistedButton(button.id)">Delete</button>
                     </div>
                     <hr style="color:#e6180d;">
                   </fragment>
@@ -771,21 +1338,219 @@ checkLogin()
 
                     <div class="form-group mb-3">
                       <label class="form-label" for="exampleFormControlSelect1" style="font-weight:normal;">Title</label>
-                      <input type="text" class="form-control" placeholder="" maxlength="20" v-model="button.button_title"/>
+                      <input type="text" class="form-control" placeholder="" maxlength="20" v-model="button.title"/>
+                    </div>
+
+                    <div class="form-group mb-3" v-if="button.media_id">
+                      <label class="form-label" for="exampleFormControlSelect1" style="font-weight:normal;">Media</label>
+                      {{button.media_id}}
                     </div>
 
                     <div class="form-group mb-3">
-                      <input type="file" class="form-control" id="defaultFile" @change="uploadFile($event,button.id)" accept="video/*"/>
+                      <input type="file" class="form-control" id="defaultFile" @change="uploadFile($event,button.id,'change')" accept="video/*"/>
                     </div>
                     
                     
                     <div class="form-group mb-3">
-                      <button type="button" class="btn btn-danger" @click="deleteButton(button.id)">Delete</button>
+                      <button type="button" class="btn btn-danger" @click="deleteExistedButton(button.id)">Delete</button>
                     </div>
                     <hr style="color:#e6180d;">
                   </fragment>
+                </div>
+              </div>
+              <div class="row">
+                <div class="col-xl-6">
+                  <div class="form-group mb-3">
+                    <button type="button" class="btn btn-teal" @click="editNodeWithButtons">Edit</button>
+                  </div>
+                </div>
+            </div>
+        </div>
+        
+        <div class="modal-footer">
+          <button type="button" class="btn btn-yellow" data-bs-dismiss="modal" id="deleteCatalogModal">Close</button>
+        </div>
+      </div>
+    </div>
+  </div>
+
+
+
+  <div class="modal fade" id="modalLg">
+    <div class="modal-dialog modal-lg">
+      <div class="modal-content">
+        <div class="modal-header">
+          <h5 class="modal-title">Message with flow actions</h5>
+          <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+        </div>
+
+        <div class="modal-body">
+            <div class="row">
+              <div class="col-xl-6">
+                <div class="form-group mb-3">
+                  <label class="form-label" for="exampleFormControlSelect1" style="font-weight:normal;">Key</label>
+                  <input type="text" class="form-control" placeholder="" v-model="key" required/>
+                </div>
+                <div class="form-group mb-3">
+                  <label class="form-label" for="exampleFormControlSelect1" style="font-weight:normal;">Name</label>
+                  <input type="text" class="form-control" placeholder="" v-model="name" required/>
+                </div>
+                <div class="form-group mb-3">
+                  <label class="form-label" for="exampleFormControlSelect1" style="font-weight:normal;">Message</label>
+                  <textarea class="form-control" id="exampleFormControlTextarea1" rows="3" v-model="message" placeholder="" required></textarea>
+                </div>
+                
+                <div class="form-group mb-3">
+                  <label class="form-label" for="exampleFormControlSelect1" style="font-weight:normal;">Button Types</label>
+                  <v-select v-model="button_type" :options="button_types" label="label" :reduce="loc => loc.value" @update:modelValue="addButton" required></v-select>
+                </div>
+              </div>
+            </div>
+            <div class="row">
+              <hr style="color:black;">
+              <div class="col-xl-12" v-for="button in buttons">
+                <fragment v-if="button.button_type =='text'">
+                  <div class="form-group mb-3">
+                    <label class="form-label" for="exampleFormControlSelect1" style="font-weight:normal;">
+                      <button type="button" class="btn btn-info">{{getType(button.button_type)}}</button>
+                    </label>
+                  </div>
+                  <div class="form-group mb-3">
+                    <label class="form-label" for="exampleFormControlSelect1" style="font-weight:normal;">Title</label>
+                    <input type="text" class="form-control" placeholder="" maxlength="20" v-model="button.title"/>
+                  </div>
+                  <div class="form-group mb-3">
+                    <label class="form-label" for="exampleFormControlSelect1" style="font-weight:normal;">Message</label>
+                    <input type="text" class="form-control" placeholder="" v-model="button.button_text"/>
+                  </div>
+                  <div class="form-group mb-3">
+                    <button type="button" class="btn btn-danger" @click="deleteButton(button.id)">Delete</button>
+                  </div>
+                  <hr style="color:#e6180d;">
+                </fragment>
+
+                <fragment v-if="button.button_type =='url'">
+                  <div class="form-group mb-3">
+                    <label class="form-label" for="exampleFormControlSelect1" style="font-weight:normal;">
+                      <button type="button" class="btn btn-pink">{{getType(button.button_type)}}</button>
+                    </label>
+                  </div>
+                  <div class="form-group mb-3">
+                    <label class="form-label" for="exampleFormControlSelect1" style="font-weight:normal;">Header</label>
+                    <input type="text" class="form-control" placeholder="" v-model="button.url_header_text"/>
+                  </div>
+                  <div class="form-group mb-3">
+                    <label class="form-label" for="exampleFormControlSelect1" style="font-weight:normal;">Body</label>
+                    <input type="text" class="form-control" placeholder="" v-model="button.url_body_text"/>
+                  </div>
+                  <div class="form-group mb-3">
+                    <label class="form-label" for="exampleFormControlSelect1" style="font-weight:normal;">Footer</label>
+                    <input type="text" class="form-control" placeholder="" v-model="button.url_footer_text"/>
+                  </div>
+                  <div class="form-group mb-3">
+                    <label class="form-label" for="exampleFormControlSelect1" style="font-weight:normal;">Url</label>
+                    <input type="text" class="form-control" placeholder="" v-model="button.url"/>
+                  </div>
+                  <div class="form-group mb-3">
+                    <label class="form-label" for="exampleFormControlSelect1" style="font-weight:normal;">Text displayed on button</label>
+                    <input type="text" class="form-control" placeholder="" maxlength="20" v-model="button.url_button_text"/>
+                  </div>
+                  <div class="form-group mb-3">
+                    <button type="button" class="btn btn-danger" @click="deleteButton(button.id)">Delete</button>
+                  </div>
+                  <hr style="color:#e6180d;">
+                </fragment>
+
+                <fragment v-if="button.button_type =='next_flow'">
+                  <div class="form-group mb-3">
+                    <label class="form-label" for="exampleFormControlSelect1" style="font-weight:normal;">
+                      <button type="button" class="btn btn-indigo">{{getType(button.button_type)}}</button>
+                    </label>
+                  </div>
+                  <div class="form-group mb-3">
+                    <label class="form-label" for="exampleFormControlSelect1" style="font-weight:normal;">Title</label>
+                    <input type="text" class="form-control" placeholder="" maxlength="20" v-model="button.title"/>
+                  </div>
+                  <div class="form-group mb-3">
+                    <label class="form-label" for="exampleFormControlSelect1" style="font-weight:normal;">Message</label>
+                    <input type="text" class="form-control" placeholder="" v-model="button.button_text"/>
+                  </div>
+                  <div class="form-group mb-3">
+                    <button type="button" class="btn btn-danger" @click="deleteButton(button.id)">Delete</button>
+                  </div>
+                  <hr style="color:#e6180d;">
+                </fragment>
+
+                <fragment v-if="button.button_type =='document'">
+                  
+                  <div class="form-group mb-3">
+                    <label class="form-label" for="exampleFormControlSelect1" style="font-weight:normal;">
+                      <button type="button" class="btn btn-success">{{getType(button.button_type)}}</button>
+                    </label>
+                  </div>
+
+                  <div class="form-group mb-3">
+                    <label class="form-label" for="exampleFormControlSelect1" style="font-weight:normal;">Title</label>
+                    <input type="text" class="form-control" placeholder="" maxlength="20" v-model="button.title"/>
+                  </div>
+
+                  <div class="form-group mb-3">
+                    <input type="file" class="form-control" id="defaultFile" @change="uploadFile($event,button.id,'create')" accept="application/pdf"/>
+                  </div>
                   
                   
+                  <div class="form-group mb-3">
+                    <button type="button" class="btn btn-danger" @click="deleteButton(button.id)">Delete</button>
+                  </div>
+                  <hr style="color:#e6180d;">
+                </fragment>
+
+                <fragment v-if="button.button_type =='image'">
+                  
+                  <div class="form-group mb-3">
+                    <label class="form-label" for="exampleFormControlSelect1" style="font-weight:normal;">
+                      <button type="button" class="btn btn-success">{{getType(button.button_type)}}</button>
+                    </label>
+                  </div>
+
+                  <div class="form-group mb-3">
+                    <label class="form-label" for="exampleFormControlSelect1" style="font-weight:normal;">Title</label>
+                    <input type="text" class="form-control" placeholder="" maxlength="20" v-model="button.title"/>
+                  </div>
+
+                  <div class="form-group mb-3">
+                    <input type="file" class="form-control" id="defaultFile" @change="uploadFile($event,button.id,'create')" accept="image/*"/>
+                  </div>
+                  
+                  
+                  <div class="form-group mb-3">
+                    <button type="button" class="btn btn-danger" @click="deleteButton(button.id)">Delete</button>
+                  </div>
+                  <hr style="color:#e6180d;">
+                </fragment>
+
+                <fragment v-if="button.button_type =='video'">
+                  
+                  <div class="form-group mb-3">
+                    <label class="form-label" for="exampleFormControlSelect1" style="font-weight:normal;">
+                      <button type="button" class="btn btn-success">{{getType(button.button_type)}}</button>
+                    </label>
+                  </div>
+
+                  <div class="form-group mb-3">
+                    <label class="form-label" for="exampleFormControlSelect1" style="font-weight:normal;">Title</label>
+                    <input type="text" class="form-control" placeholder="" maxlength="20" v-model="button.title"/>
+                  </div>
+
+                  <div class="form-group mb-3">
+                    <input type="file" class="form-control" id="defaultFile" @change="uploadFile($event,button.id,'create')" accept="video/*"/>
+                  </div>
+                  
+                  
+                  <div class="form-group mb-3">
+                    <button type="button" class="btn btn-danger" @click="deleteButton(button.id)">Delete</button>
+                  </div>
+                  <hr style="color:#e6180d;">
                 </fragment>
               </div>
             </div>
@@ -809,7 +1574,7 @@ checkLogin()
     <div class="modal-dialog modal-lg">
       <div class="modal-content">
         <div class="modal-header">
-          <h5 class="modal-title">Message without flow actions</h5>
+          <h5 class="modal-title">Interactive List Message</h5>
           <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
         </div>
 
@@ -821,63 +1586,64 @@ checkLogin()
                   <input type="text" class="form-control" placeholder="" v-model="key"/>
                 </div>
                 <div class="form-group mb-3">
-                  <label class="form-label" for="exampleFormControlSelect1" style="font-weight:normal;">Name</label>
-                  <input type="text" class="form-control" placeholder="" v-model="name"/>
+                  <label class="form-label" for="exampleFormControlSelect1" style="font-weight:normal;">header</label>
+                  <input type="text" class="form-control" placeholder="" v-model="header"/>
                 </div>
+                <div class="form-group mb-3">
+                  <label class="form-label" for="exampleFormControlSelect1" style="font-weight:normal;">body</label>
+                  <input type="text" class="form-control" placeholder="" v-model="body"/>
+                </div>
+                <div class="form-group mb-3">
+                  <label class="form-label" for="exampleFormControlSelect1" style="font-weight:normal;">footer</label>
+                  <input type="text" class="form-control" placeholder="" v-model="footer"/>
+                </div>
+                <div class="form-group mb-3">
+                  <label class="form-label" for="exampleFormControlSelect1" style="font-weight:normal;">Text displayed on button</label>
+                  <input type="text" class="form-control" placeholder="" maxlength="20" v-model="button_text"/>
+                </div>
+                <div class="form-group mb-3">
+                  <button type="button" class="btn btn-teal me-2" @click="addSection()">Add section</button>
+                </div>
+              </div>
+            </div>
+            <div class="row">
+              <hr style="color:black;">
+              <div class="col-xl-12" v-for="section in sections">
                 
                 <div class="form-group mb-3">
-                  <label class="form-label" for="exampleFormControlSelect1" style="font-weight:normal;">Message Types</label>
-                  <v-select v-model="message_type" :options="message_types" label="label" :reduce="loc => loc.value" @update:modelValue=""></v-select>
+                  <label class="form-label" for="exampleFormControlSelect1" style="font-weight:normal;"><b>Section Title</b></label>
+                  <input type="text" class="form-control" placeholder="" maxlength="20" v-model="section.title"/>
                 </div>
+
+                <div class="form-group mb-3">
+                  <button type="button" class="btn btn-lime me-2" @click="addRow(section.section_id)">Add Row</button>
+                </div>
+               
+                <fragment v-for="row in section.rows">
+                  <div class="form-group mb-3">
+                    <label class="form-label" for="exampleFormControlSelect1" style="font-weight:normal;">Row Title</label>
+                    <input type="text" class="form-control" placeholder="" maxlength="20" v-model="row.title"/>
+                  </div>
+                  <div class="form-group mb-3">
+                    <label class="form-label" for="exampleFormControlSelect1" style="font-weight:normal;">Row Description</label>
+                    <input type="text" class="form-control" placeholder="" maxlength="20" v-model="row.description"/>
+                  </div>
+                  <div class="form-group mb-3">
+                    <button type="button" class="btn btn-danger" @click="deleteRow(section.section_id,row.id)">Delete Row</button>
+                  </div>
+                  <hr style="color:#90ca4b;">
+                </fragment>
+                <div class="form-group mb-3">
+                  <button type="button" class="btn btn-danger" @click="deleteSection(section.section_id)">Delete Section</button>
+                </div>
+                <hr style="color:black;">
               </div>
             </div>
-            <div class="row">
-              <div class="col-xl-12">
-                <fragment v-if="message_type =='text'">
-                  <div class="form-group mb-3">
-                    <label class="form-label" for="exampleFormControlSelect1" style="font-weight:normal;">
-                      <button type="button" class="btn btn-info">{{getType(message_type)}}</button>
-                    </label>
-                  </div>
-                  
-                  <div class="form-group mb-3">
-                    <label class="form-label" for="exampleFormControlSelect1" style="font-weight:normal;">Message</label>
-                    <input type="text" class="form-control" placeholder="" v-model="text_message"/>
-                  </div>
-                </fragment>
-                <fragment v-if="message_type =='url'">
-                  <div class="form-group mb-3">
-                    <label class="form-label" for="exampleFormControlSelect1" style="font-weight:normal;">
-                      <button type="button" class="btn btn-pink">{{getType(message_type)}}</button>
-                    </label>
-                  </div>
-                  <div class="form-group mb-3">
-                    <label class="form-label" for="exampleFormControlSelect1" style="font-weight:normal;">Header</label>
-                    <input type="text" class="form-control" placeholder="" v-model="url_header_text"/>
-                  </div>
-                  <div class="form-group mb-3">
-                    <label class="form-label" for="exampleFormControlSelect1" style="font-weight:normal;">Body</label>
-                    <input type="text" class="form-control" placeholder="" v-model="url_body_text"/>
-                  </div>
-                  <div class="form-group mb-3">
-                    <label class="form-label" for="exampleFormControlSelect1" style="font-weight:normal;">Footer</label>
-                    <input type="text" class="form-control" placeholder="" v-model="url_footer_text"/>
-                  </div>
-                  <div class="form-group mb-3">
-                    <label class="form-label" for="exampleFormControlSelect1" style="font-weight:normal;">Url</label>
-                    <input type="text" class="form-control" placeholder="" v-model="url"/>
-                  </div>
-                  <div class="form-group mb-3">
-                    <label class="form-label" for="exampleFormControlSelect1" style="font-weight:normal;">Text displayed on button</label>
-                    <input type="text" class="form-control" placeholder="" maxlength="20" v-model="url_button_text"/>
-                  </div>
-                </fragment>
-              </div>
-            </div>
-            <div class="row">
+            
+            <div class="row" style="margin-top:20px;">
                 <div class="col-xl-6">
                   <div class="form-group mb-3">
-                    <button type="button" class="btn btn-teal" @click="createMessageOnly">Create message without flow actions</button>
+                    <button type="button" class="btn btn-teal" @click="createInteractiveList">Create Interactive List</button>
                   </div>
                 </div>
             </div>
@@ -891,15 +1657,15 @@ checkLogin()
   </div>
   
   <card>
-      <card-body class="pb-2" style="border-bottom:1px solid #ccc;">
+      <card-body class="pb-2" style="border-bottom:1px solid #ccc;" v-if='is_interactive_list_existed == false'>
         <div class="row">
           <div class="col-md-6">
             <div class="row" id="marin_top_10">
               <div class="col-md-3">
-                <button type="button" class="btn btn-warning me-2" data-bs-toggle="modal" data-bs-target="#modalLg" @click="setIsButtonTrue">Create message with flow actions</button>
+                <button type="button" class="btn btn-warning me-2" data-bs-toggle="modal" data-bs-target="#modalLg">Create message with flow actions</button>
               </div>
               <div class="col-md-3">
-                <button type="button" class="btn btn-danger me-2" data-bs-toggle="modal" data-bs-target="#modalLg1" @click="setIsButtonFalse">Create message only</button>
+                <button type="button" class="btn btn-secondary me-2" data-bs-toggle="modal" data-bs-target="#modalLg1">Create interactive list message</button>
               </div>
             </div>
           </div>
@@ -914,9 +1680,26 @@ checkLogin()
           @edgesChange="onEdgesChange"
           @connect="onConnect"
         >
+          
           <Background :gap="12"/>
           <Controls />
           <MiniMap />
+          <template #node-buttonNode="{ id, data }">
+            <ButtonNode
+              :data="data"
+              @open-edit-node="EditNode"
+              @delete-node="handleDeleteNode"
+            />
+          </template>
+
+          <template #node-listNode="{ id, data }">
+            <ListNode
+              :data="data"
+              @open-edit-list="EditList"
+              @delete-list="handleDeleteList"
+            />
+          </template>
+
         </VueFlow>
       </div>
     </card>
