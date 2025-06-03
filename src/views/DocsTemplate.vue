@@ -135,6 +135,8 @@ function submit(){
       emit('showtoast',notification_message)
     } else {
       let variables = body_variables.value.map(item => item.value)
+      console.log(url_variables)
+      console.log(url_variables.value.length)
       if(url_variables.value.length > 0){
           data['waba_id'] = props.waba_id
           data['phone_number_id'] = props.phone_number_id
@@ -160,28 +162,68 @@ function submit(){
               "example": {
                 "body_text": variables
               }
-            },
-            {
-              "type": "buttons",
-              "buttons": [
-                {
-                  "type": "PHONE_NUMBER",
-                  "text": phone_text.value,
-                  "phone_number": country.value + phone_number.value
-                },
-                {
-                  "type": "url",
-                  "text": url_text.value,
-                  "url": url.value,
-                  "example": url_variables.value[0].value
-                }
-              ]
             }
+            //{
+            //  "type": "buttons",
+            //  "buttons": [
+            //    {
+            //      "type": "PHONE_NUMBER",
+            //      "text": phone_text.value,
+            //      "phone_number": country.value + phone_number.value
+            //    },
+            //    {
+            //      "type": "url",
+            //      "text": url_text.value,
+            //      "url": url.value,
+            //      "example": url_variables.value[0].value
+            //    }
+            //  ]
+            //}
           ]
           submitForm(data)
         } else {
-          let message = "Please input variable of url"
-          emit('showtoast',message)
+          data['waba_id'] = props.waba_id
+          data['phone_number_id'] = props.phone_number_id
+          data['name'] = template_name.value
+          data['language'] = selected_language.value.id
+          data['category'] = 'UTILITY'
+          data['component'] = [
+            {
+              "type": "header",
+              "format": "DOCUMENT",
+              "example": {
+                "header_handle": [
+                  uploaded_file.value
+                ],
+                "file_name":file_name.value,
+                "file_length":file_length.value,
+                "file_type":file_type.value
+              }
+            },
+            {
+              "type": "body",
+              "text": body.value,
+              "example": {
+                "body_text": variables
+              }
+            }
+            // {
+            //   "type": "buttons",
+            //   "buttons": [
+            //     {
+            //       "type": "PHONE_NUMBER",
+            //       "text": phone_text.value,
+            //       "phone_number": country.value + phone_number.value
+            //     },
+            //     {
+            //       "type": "url",
+            //       "text": url_text.value,
+            //       "url": url.value
+            //     }
+            //   ]
+            // }
+          ]
+          submitForm(data)
         }
     }
 }
@@ -275,7 +317,7 @@ async function submitForm(payload){
     </div>
   </card-body>
   <hr>
-  <card-body class="pb-2">
+  <!-- <card-body class="pb-2">
     <div class="row">
       <div class="col-md-12">
         <div class="row" style="margin-bottom:10px;">
@@ -295,8 +337,8 @@ async function submitForm(payload){
       </div>
     </div>
   </card-body>
-  <hr>
-  <card-body class="pb-2">
+  <hr> -->
+  <!-- <card-body class="pb-2">
     <div class="row">
       <div class="col-md-12">
         <div class="row" style="margin-bottom:10px;">
@@ -331,7 +373,7 @@ async function submitForm(payload){
         </div>
       </div>
     </div>
-  </card-body>
+  </card-body> -->
   <hr>
   <card-body class="pb-2">
     <div class="row">

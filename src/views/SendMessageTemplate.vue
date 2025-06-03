@@ -109,15 +109,13 @@ async function checkConnectedCatalogue(){
 	payload['waba_id'] = selected_waba_account.value
 	payload['phone_number_id'] = selected_phone_number_id.value
 	let response = await postRequest("get_connected_catalog",payload,token)
-  console.log(response)
-	if(response.request.status == 200){
+  if(response.request.status == 200){
 		if(response['data']['error']){
 			let message = response['data']['error']['message']
 			showToast(message)
 		} else {
 			connected_catalog.value = response['data']['data']
       selected_catalog.value = connected_catalog.value
-      console.log(selected_catalog.value)
       if(selected_catalog.value.length > 0){
         showProducts(selected_catalog.value[0].id)
       }
@@ -155,7 +153,6 @@ async function showProducts(catalog_id){
   let data = await postRequest("show_products",payload,token)
   if(data.request.status == 200){
     products.value = data['data']
-    console.log(products.value)
   } else {
     let message = "error to load products"
 		showToast(message)
@@ -231,13 +228,17 @@ checkProductTemplate()
       </card-body>
       <hr>
     </fragment>
-    
+
     <fragment v-if="selected_waba_account && template_type == 'non-product'">
       <template-components :template_name="template_name" :component="template_components" :template_category="template_category" @showtoast="showToast" :waba_id="selected_waba_account" :phone_number_id="selected_phone_number_id" :template_type="template_type" :business_account_id="business_account_id" :products="products"></template-components>
     </fragment>
     <fragment v-else-if="selected_waba_account && template_type == 'product' && business_account_id && connected_catalog.length > 0">
       <template-components :template_name="template_name" :component="template_components" :template_category="template_category" @showtoast="showToast" :waba_id="selected_waba_account" :phone_number_id="selected_phone_number_id" :template_type="template_type" :business_account_id="business_account_id" :products="products"></template-components>
     </fragment>
+    <fragment v-if="template_category == 'UTILITY'">
+      <template-components :template_name="template_name" :component="template_components" :template_category="template_category" @showtoast="showToast" :waba_id="selected_waba_account" :phone_number_id="selected_phone_number_id" :template_type="template_type" :business_account_id="business_account_id" :products="products"></template-components>
+    </fragment>
+    
     
   </card>
 

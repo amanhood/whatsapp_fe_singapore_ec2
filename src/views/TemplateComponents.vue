@@ -1,21 +1,25 @@
 <script setup>
 import { useUserSessionStore } from '@/stores/user-session';
-import { ref,watch } from 'vue'
+import { ref,watch,onMounted } from 'vue'
 import { getRequest,postRequest } from '../composables/api.js'
 import { responseMessage } from '../composables/response_message.js'
 import datepicker from '@/assets/components/plugins/Datepicker.vue';
 import { Toast } from 'bootstrap';
 import { fileProcess } from '../composables/file_process.js'
 import readXlsxFile from 'read-excel-file'
+import * as XLSX from "xlsx";
+import { saveAs } from "file-saver";
+import Loading from 'vue-loading-overlay';
+import 'vue-loading-overlay/dist/css/index.css';
 
 
 const props = defineProps(['component','template_name','template_category','waba_id','phone_number_id',"template_type","business_account_id","products"])
+onMounted(() => {
+  console.log(props.component);
+});
 
-console.log(props.component)
-console.log(props.template_type)
-console.log(props.products)
 
-
+let spin_loading = ref(false)
 let customImageMaxSize = ref(3)
 let uploaded_file = ref(null)
 let file_name = ref(null)
@@ -35,8 +39,7 @@ let edit_url_index = ref(1)
 let thumbnail_product_id = ref(null)
 let sections = ref([])
 let number_of_section = ref(1)
-
-console.log(props.waba_id)
+let imported_data = ref(null);
 
 token = sessionStorage.getItem("token")
 const emit = defineEmits(["showtoast"])
@@ -98,7 +101,7 @@ async function preview(){
     payload['body_variables'] = variables
     payload['limited_time_offer'] = limited_time_offer_text.value
     payload['offer_code'] = offer_code.value
-    let link_variables = body_variables.value.length > 0
+    let link_variables = url_variables.value.length > 0
     ? url_variables.value
         .map(item => item.value)
         .filter(value => value !== null && value !== undefined) // filter out null or undefined
@@ -107,10 +110,8 @@ async function preview(){
     payload['recipient'] = recipient.value
     payload['components'] = props.component
     payload['template_name'] = props.template_name
-
     payload['thumbnail_product_id'] = thumbnail_product_id.value
     payload['sections'] = sections.value
-
     let data = await postRequest("send_ltomessage",payload,token)
     if(data.request.status == 200){
       let notification_message = responseMessage(data)
@@ -124,55 +125,135 @@ async function preview(){
   }
 }
 
-function bulk_send(){
-  if(contacts.value.length > 0 && contacts.value.length < 101){
-    let payload = {}
-    payload['waba_id'] = props.waba_id
-    payload['phone_number_id'] = props.phone_number_id
-    payload['template_type'] = "normal"
+async function sendMultiple(){
+  spin_loading.value = true;
+  const payload = {
+    waba_id: props.waba_id,
+    phone_number_id: props.phone_number_id,
+    template_type: props.template_category === 'UTILITY' ? 'utility' : 'normal',
+    template_name: props.template_name,
+    components: props.component
+  };
+  const message_data = [];
+  for (let index = 0; index < imported_data.value.length; index++) {
+    const data = imported_data.value[index];
+
+    if (!data.contact_phone_number) {
+      emit('showtoast', `Missing contact phone number at row ${index + 1}`);
+      spin_loading.value = false;
+      return; // ✅ this exits the entire async function
+    }
+
+    const message = {
+      recipient: data.contact_phone_number
+    }
+
     props.component.forEach((item) => {
       if(item.type == 'LIMITED_TIME_OFFER'){
         payload['template_type'] = 'limited_time_offer'
+        payload['limited_time_offer'] = limited_time_offer_text.value
+        //check the coupon code
+      }
+      if(item.type == 'BUTTONS'){
+        item.buttons.forEach((button)=>{
+          if(button.type == 'MPM'){
+            // template with products
+            message['thumbnail_product_id'] = thumbnail_product_id.value
+            message['sections'] = sections.value
+            payload['template_type'] = 'multiple_products'
+          }
+          if(button.type == 'CATALOG'){
+            // template with products
+            message['thumbnail_product_id'] = thumbnail_product_id.value
+            message['sections'] = sections.value
+            payload['template_type'] = 'catalog_products'
+          }
+          if(button.type == 'URL'){
+            // check url contain variable ? 
+            if (Array.isArray(button.example) && button.example.length > 0) {
+              // check any url variable at excel
+              let link_variables = []
+              if (typeof data.url === 'string' && data.url.trim() !== ''){
+                link_variables.push(data.url)
+                message['url_variables'] = link_variables
+              } else {
+                // if no header text existed at excel , use header_text input from web
+                link_variables = url_variables.value.length > 0
+                ? url_variables.value
+                    .map(item => item.value)
+                    .filter(value => value !== null && value !== undefined) // filter out null or undefined
+                : [];
+                message['url_variables'] = link_variables
+              }
+            }
+          }
+          if(button.type == 'COPY_CODE'){
+            if ('coupon' in data && data.coupon) {
+              message['offer_code'] = data.coupon
+            } else if (offer_code.value) {
+              message['offer_code'] = offer_code.value
+            } else {
+              message['offer_code'] = button.example[0]
+            }
+          }
+        })
+      }
+      if(item.type == 'HEADER'){
+        // check header is image or text
+        if(item.format == 'IMAGE'){
+          // check upload file existed ?
+          payload['uploaded_file'] = uploaded_file.value
+          payload['file_name'] = file_name.value
+          payload['file_type'] = file_type.value
+        } else {
+          // check any variable at header ?
+          if (item.example && 'header_text' in item.example) {
+            // check any header text is provided at excel
+            if (typeof data.header_01 === 'string' && data.header_01.trim() !== ''){
+              message['header_text'] = data.header_01
+            } else {
+              // if no header text existed at excel , use header_text input from web
+              message['header_text'] = header_text.value
+            }
+          } 
+        }
+      }
+      if(item.type == 'BODY'){
+        // check any variable and how many variables 
+        if (item.example && Array.isArray(item.example.body_text)) {
+          const count = item.example.body_text[0].length;
+          // Count keys that start with 'body_'
+          const bodyFieldsCount = Object.keys(data).filter(key => key.startsWith('body_')).length;
+          if (count == bodyFieldsCount){
+            const body_variables = Object.keys(data)
+            .filter(key => key.startsWith('body_'))
+            .sort((a, b) => {
+              const numA = parseInt(a.split('_')[1]);
+              const numB = parseInt(b.split('_')[1]);
+              return numA - numB;
+            })
+            .map(key => data[key]);
+            message['body_variables'] = body_variables
+          } else {
+            let notification_message = "Missing variables at body"
+            emit('showtoast',notification_message)
+          }
+        } else {
+          console.log("example or body_text of body does not exist.");
+        }
       }
     })
-    if(props.template_category == 'UTILITY'){
-        payload['template_type'] = 'utility'
-    }
-    payload['uploaded_file'] = uploaded_file.value
-    payload['file_name'] = file_name.value
-    payload['file_type'] = file_type.value
-    payload['header_text'] = header_text.value
-    if (body_variables.value.length > 0){
-      let variables = body_variables.value.map(item => item.value);
-      payload['body_variables'] = variables
-    } else {
-      payload['body_variables'] = body_variables.value
-    }
-
-    payload['limited_time_offer'] = limited_time_offer_text.value
-    payload['offer_code'] = offer_code.value
-    if(url_variables.value.length > 0){
-      let variables = url_variables.value.map(item => item.value);
-      payload['url_variables'] = variables
-    }
-    payload['components'] = props.component
-    payload['template_name'] = props.template_name
-
-    contacts.value.forEach((contact, i) => {
-      payload['recipient'] =contact[0]
-      send_to_background_task(payload,token)
-      //emit('closeModal')
-    });
-  } else {
-    let notification_message = "No recipients or over 100 recipients provided"
-    emit('showtoast',notification_message)
+    message_data.push(message);
   }
+  payload.message_data = message_data;
+  await send_to_background_task(payload, token);
+  spin_loading.value = false;
 }
 
 async function send_to_background_task(payload,token){
-    let data = await postRequest("bulk_message_bg",payload,token)
+    let data = await postRequest("bulk_message",payload,token)
     if(data.request.status == 200){
-      let notification_message = "message will be sent to " + payload['recipient'] + " later"
+      let notification_message = "messages will be scheduled to send to recipients"
       emit('showtoast',notification_message)
     } else {
       console.log(data)
@@ -194,10 +275,39 @@ function getComponentName(item){
 }
 
 function uploadExcel(event) {
-  let xlsxfile = event.target.files ? event.target.files[0] : null;
-  readXlsxFile(xlsxfile).then((rows) => {
-    contacts.value = rows
+  let xlsxFile = event.target.files ? event.target.files[0] : null;
+  if (!xlsxFile) {
+    console.warn("No file selected");
+    return;
+  }
+  readXlsxFile(xlsxFile).then((rows) => {
+    if (!rows.length || rows.length < 2) {
+      console.warn('Excel file does not contain enough rows.')
+      return
+    }
+    const headers = rows[0]
+    const rowData = rows.slice(1).filter(row => row.some(cell => cell != null))
+    const result = rowData.map(row =>
+      headers.reduce((obj, header, index) => {
+        let cell = row[index];
+
+        // Check if cell is a Date object and convert to YYYY-MM-DD string
+        if (cell instanceof Date) {
+          const year = cell.getFullYear();
+          const month = String(cell.getMonth() + 1).padStart(2, '0');
+          const day = String(cell.getDate()).padStart(2, '0');
+          cell = `${year}-${month}-${day}`;
+        }
+
+        obj[header] = cell;
+        return obj;
+      }, {})
+    )
+    imported_data.value = result
+  }).catch((err) => {
+    console.error('Error reading Excel:', err)
   })
+  
 }
 
 function updateBodyVariables(){
@@ -281,6 +391,55 @@ function checkExistPhoto(product,section){
   return is_selected
 }
 
+function downloadTemplate(){
+  const headers = ['contact_phone_number']
+  const row = {'contact_phone_number':''};
+  props.component.forEach((item) => {
+    if (item.type === "HEADER" && item.example?.header_text) {
+      item.example.header_text.forEach((header, i) => {
+        const key = `header_${String(i + 1).padStart(2, '0')}`;
+        headers.push(key);
+        row[key] = header;
+      });
+    }
+    if (item.type === "BODY" && item.example?.body_text) {
+      item.example.body_text[0].forEach((body, i) => {
+        const key = `body_${String(i + 1).padStart(2, '0')}`;
+        //console.log(key)
+        headers.push(key);
+        row[key] = body;
+      });
+    }
+    if (item.type === "BUTTONS") {
+      item.buttons.forEach((button, i) => {
+        if(button.type == 'COPY_CODE'){
+          const key = 'coupon'
+          headers.push(key)
+          row[key] = button.example[0]
+        }
+        if(button.type == 'URL'){
+          if(button.example){
+            const key = 'url'
+            headers.push(key)
+            row[key] = button.example[0]
+          }
+        }
+      });
+    }
+  })
+
+  //Convert data to worksheet
+  const worksheet = XLSX.utils.json_to_sheet([row], { header: headers });
+
+  //Create workbook and append worksheet
+  const workbook = XLSX.utils.book_new();
+  XLSX.utils.book_append_sheet(workbook, worksheet, "Users");
+
+  //Write workbook and trigger download
+  const wbout = XLSX.write(workbook, { bookType: "xlsx", type: "array" });
+  saveAs(new Blob([wbout], { type: "application/octet-stream" }), "import_template.xlsx");
+}
+
 
 
 updateBodyVariables()
@@ -306,6 +465,8 @@ updateBodyVariables()
 
 
 <template>
+  <loading v-model:active="spin_loading"
+  :is-full-page="true"/>
   <div class="modal fade" id="modalLg2">
     <div class="modal-dialog modal-lg">
       <div class="modal-content">
@@ -566,23 +727,33 @@ updateBodyVariables()
     <hr>
   </fragment>
 
+  <card-body>
+    <div class="row" id="row_margin">
+      <div class="flex-fill fw-bold fs-16px">{{ template_name }}</div>
+    </div>
+  </card-body>
+  <hr>
+
   <card-body v-for="tc in props.component">
     <div class="row" id="row_margin">
       <div class="flex-fill fw-bold fs-16px">{{getComponentName(tc.type)}}</div>
     </div>
     <template v-if="tc.type == 'HEADER'">
-      <fragment v-if="tc.format == 'IMAGE' && tc.example">
+      <fragment v-if="tc.format == 'IMAGE' || tc.format == 'VIDEO' && tc.example">
         <div class="row">
-          <div class="col-md-12" style="margin-top:10px;">
+          <div class="col-md-12" style="margin-top:10px;" v-if="tc.format == 'IMAGE'">
             <img :src="tc.example.header_handle[0]" style="width:30%">
+          </div>
+          <div class="col-md-12" style="margin-top:10px;" v-if="tc.format == 'VIDEO'">
+            {{tc.example.header_handle[0]}}
           </div>
         </div>
         <div class="row" style="margin-top:20px;">
           <div class="col-12">
             <card>
               <card-body style="background-color:#ffffe0;">
-                <p class="card-text">If you want to change the default header image, please upload</p>
-                <input type="file" class="form-control" id="defaultFile" @change="uploadFile" accept="image/*"/>
+                <p class="card-text">If you want to change the default header file, please upload</p>
+                <input type="file" class="form-control" id="defaultFile" @change="uploadFile" accept="image/*,video/*"/>
               </card-body>
             </card>
           </div>
@@ -901,6 +1072,25 @@ updateBodyVariables()
 
   <card-body>
     <div class="row" id="row_margin">
+      <div class="flex-fill fw-bold fs-16px">Download sending message template</div>
+    </div>
+    <div class="row" style="margin-top:10px;">
+      <div class="col-12">
+        <card>
+          <card-body style="border:1px solid #C5C5C5;background-color:#ffffe0;">
+              <div class="row">
+                <div class="col-12" style="margin-top:10px;">
+                  <button type="button" class="btn btn-primary mb-1 me-1" @click="downloadTemplate">Download</button>
+                </div>
+              </div>
+          </card-body>
+        </card>
+      </div>
+    </div>
+  </card-body>
+
+  <card-body>
+    <div class="row" id="row_margin">
       <div class="flex-fill fw-bold fs-16px">Send to multiple recipients</div>
     </div>
     <div class="row" style="margin-top:10px;">
@@ -914,7 +1104,7 @@ updateBodyVariables()
               </div>
               <div class="row">
                 <div class="col-12" style="margin-top:10px;">
-                  <button type="button" class="btn btn-primary mb-1 me-1" @click="bulk_send">Send Multiples</button>
+                  <button type="button" class="btn btn-primary mb-1 me-1" @click="sendMultiple" v-if="imported_data">Send Multiples</button>
                 </div>
               </div>
           </card-body>

@@ -183,9 +183,8 @@ function submit(){
       let data = {}
       var re = /\{\{.*?\}\}/g
       let re_variables = body.value.match(re)
-      if(re_variables && re_variables.length != body_variables.length){
-        let notification_message = ""
-        notification_message = "Unmatched body variables, you have " + re_variables.length + " variables. But got "  + body_variables.value.length + " variables at body"
+      if(re_variables && re_variables.length != body_variables.value.length){
+        let notification_message = "Unmatched body variables, you have " + re_variables.length + " variables. But got "  + body_variables.value.length + " variables at body"
         emit('showtoast',notification_message)
       } else {
         data['waba_id'] = props.waba_id
@@ -194,10 +193,17 @@ function submit(){
         data['category'] = 'MARKETING'
         data['language'] = selected_language.value.id
         data['component'] = []
+        let file_type_format = null
+        let file_type_signal = file_type.value.split("/")[0]
+        if (file_type_signal == 'image'){
+          file_type_format = 'image'
+        } else if (file_type_signal == 'video') {
+          file_type_format = 'video'
+        }
         if(uploaded_file.value){
             data['component'].push({
               "type": "header",
-              "format": "image",
+              "format": file_type_format,
               "example": {
                 "header_handle": [
                   uploaded_file.value
@@ -313,7 +319,7 @@ async function submitForm(payload){
         </div>
         <div class="row" style="margin-bottom:20px;">
           <div class="col-md-6" v-if="!header">
-            <input type="file" class="form-control" id="defaultFile" @change="uploadFile" accept="image/*"/>
+            <input type="file" class="form-control" id="defaultFile" @change="uploadFile" accept="image/*,video/*"/>
           </div>
         </div>
         <div class="row" style="margin-bottom:10px;">

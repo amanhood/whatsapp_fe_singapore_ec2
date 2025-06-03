@@ -155,7 +155,7 @@ checkWaba()
           </div>
           <div class="col-xl-3">
             <div class="mb-3">
-              <v-select v-model="selected_category" :options="categories" label="title" @update:modelValue="selectCategory(event)"></v-select>
+              <v-select v-model="selected_category" :options="categories" label="title"></v-select>
             </div>
           </div>
           <div class="col-xl-3">
