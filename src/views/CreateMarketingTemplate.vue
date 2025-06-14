@@ -9,6 +9,7 @@ import CreateTemplate from './CreateTemplate.vue'
 import LtoTemplate from './LtoTemplate.vue'
 import DocsTemplate from './DocsTemplate.vue'
 import ProductsTemplate from './ProductsTemplate.vue'
+import ChoiceTemplate from './ChoiceTemplate.vue'
 import FlowTemplate from './FlowTemplate.vue'
 import { Toast } from 'bootstrap';
 
@@ -19,7 +20,8 @@ let template_types = [
         { id:'general_template',title: "General message template" },
         { id:'limited_time_sale',title: "Special sales message template" },
         { id:'document_template',title: "Document message template" },
-        { id:'product_catalog',title: "Products message template" }
+        { id:'product_catalog',title: "Products message template" },
+        { id:'choice_template',title: "Choice message template" }
       ]
 let whatsapp_accounts = ref([])
 let selected_waba_account = ref(null)
@@ -84,5 +86,6 @@ checkWaba()
     <lto-template @showtoast="showToast" :waba_id="selected_waba_account" :phone_number_id="selected_phone_number_id" v-if="template_type && template_type.id == 'limited_time_sale'"></lto-template>
     <docs-template @showtoast="showToast" :waba_id="selected_waba_account" :phone_number_id="selected_phone_number_id" v-if="template_type && template_type.id == 'document_template'"></docs-template>
     <products-template @showtoast="showToast" :waba_id="selected_waba_account" :phone_number_id="selected_phone_number_id" v-if="template_type && template_type.id == 'product_catalog'"></products-template>
+    <choice-template @showtoast="showToast" :waba_id="selected_waba_account" :phone_number_id="selected_phone_number_id" v-if="template_type && template_type.id == 'choice_template'"></choice-template>
   </card>
 </template>

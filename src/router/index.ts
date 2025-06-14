@@ -3,6 +3,7 @@ import { createRouter, createWebHistory } from "vue-router";
 const router = createRouter({
   history: createWebHistory(import.meta.env.BASE_URL),
   routes: [
+	{ path: '/page/send_message_records', component: () => import('../views/SentMessageRecords.vue') },
 	{ path: '/page/chat_flow', component: () => import('../views/ChatFlow.vue') },
 	{ path: '/page/flow_index', component: () => import('../views/FlowIndex.vue') },
 	{ path: '/page/order_confirmation/:id', component: () => import('../views/OrderConfirmation.vue') },

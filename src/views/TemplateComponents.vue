@@ -15,7 +15,9 @@ import 'vue-loading-overlay/dist/css/index.css';
 
 const props = defineProps(['component','template_name','template_category','waba_id','phone_number_id',"template_type","business_account_id","products"])
 onMounted(() => {
-  console.log(props.component);
+  // console.log(props.component);
+  console.log(props.template_type);
+  // console.log(props.template_category)
 });
 
 
@@ -40,10 +42,45 @@ let thumbnail_product_id = ref(null)
 let sections = ref([])
 let number_of_section = ref(1)
 let imported_data = ref(null);
+let schedule_time = ref(null)
+const minDate = new Date()
+
+const disableDates = (date) => {
+  const now = new Date()
+  const d = new Date(date)
+
+  // Compare just date parts
+  const dateOnly = new Date(d.getFullYear(), d.getMonth(), d.getDate())
+  const todayOnly = new Date(now.getFullYear(), now.getMonth(), now.getDate())
+
+  return dateOnly.getTime() < todayOnly.getTime()
+}
+
+const validateTime = (selected) => {
+  if (!schedule_time) return
+// Ensure we are working with a Date object
+  const selectedDate = new Date(schedule_time.value)
+  const now = new Date()
+
+  // Check if selected date is today
+  const isToday =
+    selectedDate.getFullYear() === now.getFullYear() &&
+    selectedDate.getMonth() === now.getMonth() &&
+    selectedDate.getDate() === now.getDate()
+
+  if (isToday) {
+    // Must be at least 15 minutes later
+    const fifteenMinutesLater = new Date(now.getTime() + 15 * 60 * 1000)
+    if (selectedDate.getTime() < fifteenMinutesLater.getTime()) {
+      let notification_message = "Please select a time at least 15 minutes later than now."
+      emit('showtoast',notification_message)
+      schedule_time.value = null
+    }
+  } 
+}
 
 token = sessionStorage.getItem("token")
 const emit = defineEmits(["showtoast"])
-
 
 function getDateTime(){
   limited_time_offer_text.value = Date.parse(limited_time_offer_text.value)
@@ -52,6 +89,22 @@ function getDateTime(){
 function timeConverter(epoch){
   var time = new Date(parseInt(epoch))
   return time;
+}
+
+function convertYMDHMS(sending_time){
+  const date = new Date(sending_time);
+  // Helper to pad numbers with leading zeros
+  const pad = (n) => n.toString().padStart(2, '0');
+  // Extract parts
+  const yyyy = date.getFullYear();
+  const mm = pad(date.getMonth() + 1); // getMonth() is zero-based
+  const dd = pad(date.getDate());
+  const hh = pad(date.getHours());
+  const min = pad(date.getMinutes());
+  const ss = pad(date.getSeconds());
+  // Combine to format
+  const formatted = `${yyyy}-${mm}-${dd} ${hh}:${min}:${ss}`;
+  return formatted
 }
 
 function restrictSpecialChars() {
@@ -126,132 +179,168 @@ async function preview(){
 }
 
 async function sendMultiple(){
-  spin_loading.value = true;
-  const payload = {
-    waba_id: props.waba_id,
-    phone_number_id: props.phone_number_id,
-    template_type: props.template_category === 'UTILITY' ? 'utility' : 'normal',
-    template_name: props.template_name,
-    components: props.component
-  };
-  const message_data = [];
-  for (let index = 0; index < imported_data.value.length; index++) {
-    const data = imported_data.value[index];
+  if(schedule_time.value){
+    spin_loading.value = true;
+    const payload = {
+      waba_id: props.waba_id,
+      phone_number_id: props.phone_number_id,
+      template_type: props.template_category === 'UTILITY' ? 'utility' : 'normal',
+      template_name: props.template_name,
+      components: props.component,
+      thumbnail_product_id:thumbnail_product_id.value,
+      sections:sections.value
+    };
 
-    if (!data.contact_phone_number) {
-      emit('showtoast', `Missing contact phone number at row ${index + 1}`);
-      spin_loading.value = false;
-      return; // ✅ this exits the entire async function
-    }
-
-    const message = {
-      recipient: data.contact_phone_number
-    }
-
-    props.component.forEach((item) => {
-      if(item.type == 'LIMITED_TIME_OFFER'){
-        payload['template_type'] = 'limited_time_offer'
-        payload['limited_time_offer'] = limited_time_offer_text.value
-        //check the coupon code
+    if(props.template_type == 'specific_products'){
+      if (!thumbnail_product_id || sections.value.length == 0){
+        spin_loading.value = false;
+        let notification_message = "No cover thumbnail and sections are existed, please select cover thumbnail of catalog and create sections"
+        emit('showtoast',notification_message)
+        return 
       }
-      if(item.type == 'BUTTONS'){
-        item.buttons.forEach((button)=>{
-          if(button.type == 'MPM'){
-            // template with products
-            message['thumbnail_product_id'] = thumbnail_product_id.value
-            message['sections'] = sections.value
-            payload['template_type'] = 'multiple_products'
-          }
-          if(button.type == 'CATALOG'){
-            // template with products
-            message['thumbnail_product_id'] = thumbnail_product_id.value
-            message['sections'] = sections.value
-            payload['template_type'] = 'catalog_products'
-          }
-          if(button.type == 'URL'){
-            // check url contain variable ? 
-            if (Array.isArray(button.example) && button.example.length > 0) {
-              // check any url variable at excel
-              let link_variables = []
-              if (typeof data.url === 'string' && data.url.trim() !== ''){
-                link_variables.push(data.url)
-                message['url_variables'] = link_variables
-              } else {
-                // if no header text existed at excel , use header_text input from web
-                link_variables = url_variables.value.length > 0
-                ? url_variables.value
-                    .map(item => item.value)
-                    .filter(value => value !== null && value !== undefined) // filter out null or undefined
-                : [];
-                message['url_variables'] = link_variables
+    }
+
+    if(props.template_type == 'limited_time_offer'){
+      if(limited_time_offer_text.value){
+        const inputDate = new Date(limited_time_offer_text.value);
+        const tomorrow = new Date();
+        // Reset today's time to 00:00:00 for accurate comparison
+        tomorrow.setHours(0, 0, 0, 0);
+        tomorrow.setDate(tomorrow.getDate() + 1);
+        if (inputDate < tomorrow) {
+          spin_loading.value = false;
+          let notification_message = "The expiry date of promotion is earlier than or euqal today"
+          emit('showtoast',notification_message)
+          return 
+        }
+      } 
+    } 
+
+    const message_data = [];
+    for (let index = 0; index < imported_data.value.length; index++) {
+      const data = imported_data.value[index];
+
+      if (!data.contact_phone_number) {
+        emit('showtoast', `Missing contact phone number at row ${index + 1}`);
+        spin_loading.value = false;
+        return; // ✅ this exits the entire async function
+      }
+
+      const message = {
+        recipient: data.contact_phone_number
+      }
+      props.component.forEach((item) => {
+        if(item.type == 'LIMITED_TIME_OFFER'){
+          payload['template_type'] = 'limited_time_offer'
+          payload['limited_time_offer'] = limited_time_offer_text.value
+          //check the coupon code
+        }
+        if(item.type == 'BUTTONS'){
+          item.buttons.forEach((button)=>{
+            if(button.type == 'MPM'){
+              // template with products
+              message['thumbnail_product_id'] = thumbnail_product_id.value
+              message['sections'] = sections.value
+              payload['template_type'] = 'multiple_products'
+            }
+            if(button.type == 'CATALOG'){
+              // template with products
+              message['thumbnail_product_id'] = thumbnail_product_id.value
+              message['sections'] = sections.value
+              payload['template_type'] = 'catalog_products'
+            }
+            if(button.type == 'URL'){
+              // check url contain variable ? 
+              if (Array.isArray(button.example) && button.example.length > 0) {
+                // check any url variable at excel
+                let link_variables = []
+                if (typeof data.url === 'string' && data.url.trim() !== ''){
+                  link_variables.push(data.url)
+                  message['url_variables'] = link_variables
+                } else {
+                  // if no header text existed at excel , use header_text input from web
+                  link_variables = url_variables.value.length > 0
+                  ? url_variables.value
+                      .map(item => item.value)
+                      .filter(value => value !== null && value !== undefined) // filter out null or undefined
+                  : [];
+                  message['url_variables'] = link_variables
+                }
               }
             }
-          }
-          if(button.type == 'COPY_CODE'){
-            if ('coupon' in data && data.coupon) {
-              message['offer_code'] = data.coupon
-            } else if (offer_code.value) {
-              message['offer_code'] = offer_code.value
-            } else {
-              message['offer_code'] = button.example[0]
+            if(button.type == 'COPY_CODE'){
+              if ('coupon' in data && data.coupon) {
+                message['offer_code'] = data.coupon
+              } else if (offer_code.value) {
+                message['offer_code'] = offer_code.value
+              } else {
+                message['offer_code'] = button.example[0]
+              }
             }
-          }
-        })
-      }
-      if(item.type == 'HEADER'){
-        // check header is image or text
-        if(item.format == 'IMAGE'){
-          // check upload file existed ?
-          payload['uploaded_file'] = uploaded_file.value
-          payload['file_name'] = file_name.value
-          payload['file_type'] = file_type.value
-        } else {
-          // check any variable at header ?
-          if (item.example && 'header_text' in item.example) {
-            // check any header text is provided at excel
-            if (typeof data.header_01 === 'string' && data.header_01.trim() !== ''){
-              message['header_text'] = data.header_01
-            } else {
-              // if no header text existed at excel , use header_text input from web
-              message['header_text'] = header_text.value
-            }
-          } 
+          })
         }
-      }
-      if(item.type == 'BODY'){
-        // check any variable and how many variables 
-        if (item.example && Array.isArray(item.example.body_text)) {
-          const count = item.example.body_text[0].length;
-          // Count keys that start with 'body_'
-          const bodyFieldsCount = Object.keys(data).filter(key => key.startsWith('body_')).length;
-          if (count == bodyFieldsCount){
-            const body_variables = Object.keys(data)
-            .filter(key => key.startsWith('body_'))
-            .sort((a, b) => {
-              const numA = parseInt(a.split('_')[1]);
-              const numB = parseInt(b.split('_')[1]);
-              return numA - numB;
-            })
-            .map(key => data[key]);
-            message['body_variables'] = body_variables
+        if(item.type == 'HEADER'){
+          // check header is image or text
+          if(item.format == 'IMAGE' || item.format == 'VIDEO' || item.format == 'DOCUMENT'){
+            // check upload file existed ?
+            payload['uploaded_file'] = uploaded_file.value
+            payload['file_name'] = file_name.value
+            payload['file_type'] = file_type.value
           } else {
-            let notification_message = "Missing variables at body"
-            emit('showtoast',notification_message)
+            // check any variable at header ?
+            if (item.example && 'header_text' in item.example) {
+              // check any header text is provided at excel
+              if (typeof data.header_01 === 'string' && data.header_01.trim() !== ''){
+                message['header_text'] = data.header_01
+              } else {
+                // if no header text existed at excel , use header_text input from web
+                message['header_text'] = header_text.value
+              }
+            } 
           }
-        } else {
-          console.log("example or body_text of body does not exist.");
         }
-      }
-    })
-    message_data.push(message);
+        if(item.type == 'BODY'){
+          // check any variable and how many variables 
+          if (item.example && Array.isArray(item.example.body_text)) {
+            const count = item.example.body_text[0].length;
+            // Count keys that start with 'body_'
+            const bodyFieldsCount = Object.keys(data).filter(key => key.startsWith('body_')).length;
+            if (count == bodyFieldsCount){
+              const body_variables = Object.keys(data)
+              .filter(key => key.startsWith('body_'))
+              .sort((a, b) => {
+                const numA = parseInt(a.split('_')[1]);
+                const numB = parseInt(b.split('_')[1]);
+                return numA - numB;
+              })
+              .map(key => data[key]);
+              message['body_variables'] = body_variables
+            } else {
+              let notification_message = "Missing variables at body"
+              emit('showtoast',notification_message)
+            }
+          } else {
+            console.log("example or body_text of body does not exist.");
+          }
+        }
+      })
+      message_data.push(message);
+    }
+    payload.message_data = message_data;
+    payload['schedule_time'] = convertYMDHMS(schedule_time.value)
+    payload['token'] = token
+    await send_to_background_task(payload, token);
+    spin_loading.value = false;
+  } else {
+    let notification_message = "Please set your sending schedule"
+    emit('showtoast',notification_message)
   }
-  payload.message_data = message_data;
-  await send_to_background_task(payload, token);
-  spin_loading.value = false;
+  
 }
 
 async function send_to_background_task(payload,token){
-    let data = await postRequest("bulk_message",payload,token)
+    //let data = await postRequest("bulk_message",payload,token)
+    let data = await postRequest("save_scheduled_background_jobs",payload,token)
     if(data.request.status == 200){
       let notification_message = "messages will be scheduled to send to recipients"
       emit('showtoast',notification_message)
@@ -660,7 +749,7 @@ updateBodyVariables()
   </div>
 
   
-  <fragment v-if="props.template_type == 'product' && props.products.length > 0">
+  <fragment v-if="props.template_type == 'specific_products' && props.products.length > 0">
     <card-body>
       <div class="row">
         <div class="col-md-6">
@@ -745,7 +834,7 @@ updateBodyVariables()
             <img :src="tc.example.header_handle[0]" style="width:30%">
           </div>
           <div class="col-md-12" style="margin-top:10px;" v-if="tc.format == 'VIDEO'">
-            {{tc.example.header_handle[0]}}
+            Video
           </div>
         </div>
         <div class="row" style="margin-top:20px;">
@@ -1081,6 +1170,31 @@ updateBodyVariables()
               <div class="row">
                 <div class="col-12" style="margin-top:10px;">
                   <button type="button" class="btn btn-primary mb-1 me-1" @click="downloadTemplate">Download</button>
+                </div>
+              </div>
+          </card-body>
+        </card>
+      </div>
+    </div>
+  </card-body>
+
+  <card-body v-if="imported_data">
+    <div class="row" id="row_margin">
+      <div class="flex-fill fw-bold fs-16px">Set sending schedule</div>
+    </div>
+    <div class="row" style="margin-top:10px;">
+      <div class="col-12">
+        <card>
+          <card-body style="border:1px solid #C5C5C5;background-color:#ffffe0;">
+              <p class="card-text">Please set your schedule for sending multiple messages </p>
+              <div class="row">
+                <div class="col-12" style="margin-top:10px;">
+                  <datepicker 
+                    v-model="schedule_time" 
+                    :min-date="minDate"
+                    :disabled-dates="disableDates"
+                    @update:model-value="validateTime"
+                  />
                 </div>
               </div>
           </card-body>

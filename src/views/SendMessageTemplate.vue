@@ -72,14 +72,18 @@ function showToast(message) {
 
 function checkProductTemplate(){
   template.components.forEach((sitem, i) => {
-    if(sitem.type == "BUTTONS"){
+    if(sitem.type == "LIMITED_TIME_OFFER"){
+      template_type.value = "limited_time_offer"
+    } else if (sitem.type == "BUTTONS"){
       sitem.buttons.forEach((titem, i) => {
-        if(titem.type == "MPM" || titem.type == "CATALOG"){
-          template_type.value = "product"
-        } else {
-          template_type.value = "non-product"
-        }
+        if(titem.type == "CATALOG"){
+          template_type.value = "all_products"
+        } else if (titem.type == "MPM"){
+          template_type.value = "specific_products"
+        } 
       });
+    } else {
+      template_type.value = "non_product"
     }
   });
 }
@@ -204,7 +208,7 @@ checkProductTemplate()
       </div>
     </card-body>
     <hr>
-    <fragment v-if="template_type == 'product'">
+    <fragment v-if="template_type == 'specific_products'">
       <card-body class="pb-2" v-if="business_account_id">
         <div class="row">
           <div class="col-md-12">
@@ -229,12 +233,22 @@ checkProductTemplate()
       <hr>
     </fragment>
 
-    <fragment v-if="selected_waba_account && template_type == 'non-product'">
+    <fragment v-if="selected_waba_account && template_type == 'non_product'">
       <template-components :template_name="template_name" :component="template_components" :template_category="template_category" @showtoast="showToast" :waba_id="selected_waba_account" :phone_number_id="selected_phone_number_id" :template_type="template_type" :business_account_id="business_account_id" :products="products"></template-components>
     </fragment>
-    <fragment v-else-if="selected_waba_account && template_type == 'product' && business_account_id && connected_catalog.length > 0">
+
+    <fragment v-else-if="selected_waba_account && template_type == 'limited_time_offer'">
       <template-components :template_name="template_name" :component="template_components" :template_category="template_category" @showtoast="showToast" :waba_id="selected_waba_account" :phone_number_id="selected_phone_number_id" :template_type="template_type" :business_account_id="business_account_id" :products="products"></template-components>
     </fragment>
+   
+    <fragment v-else-if="selected_waba_account && business_account_id && connected_catalog.length > 0 && template_type == 'all_products'">
+      <template-components :template_name="template_name" :component="template_components" :template_category="template_category" @showtoast="showToast" :waba_id="selected_waba_account" :phone_number_id="selected_phone_number_id" :template_type="template_type" :business_account_id="business_account_id" :products="products"></template-components>
+    </fragment>
+
+    <fragment v-else-if="selected_waba_account && business_account_id && connected_catalog.length > 0 && template_type == 'specific_products'">
+      <template-components :template_name="template_name" :component="template_components" :template_category="template_category" @showtoast="showToast" :waba_id="selected_waba_account" :phone_number_id="selected_phone_number_id" :template_type="template_type" :business_account_id="business_account_id" :products="products"></template-components>
+    </fragment>
+
     <fragment v-if="template_category == 'UTILITY'">
       <template-components :template_name="template_name" :component="template_components" :template_category="template_category" @showtoast="showToast" :waba_id="selected_waba_account" :phone_number_id="selected_phone_number_id" :template_type="template_type" :business_account_id="business_account_id" :products="products"></template-components>
     </fragment>

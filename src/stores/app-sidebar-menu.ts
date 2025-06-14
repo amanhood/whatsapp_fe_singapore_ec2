@@ -34,13 +34,19 @@ export const useAppSidebarMenuStore = defineStore({
 			is_divider: true
 		},
 		{
-			text: 'Marketing Message Templates',
+			text: 'Marketing Message',
 			is_header: true
 		},
 		{
 			url: '/page/marketing_templates',
 			icon: 'fa fa-cog',
-			text: 'Manage'
+			text: 'Manage templates'
+		},
+		,
+		{
+			url: '/page/send_message_records',
+			icon: 'fa fa-user-circle',
+			text: 'Sent records'
 		},
 		{
 			is_divider: true
