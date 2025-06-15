@@ -7,6 +7,8 @@ import datepicker from '@/assets/components/plugins/Datepicker.vue';
 import moment from 'moment';
 import { responseMessage } from '../composables/response_message.js'
 import { fileProcess } from '../composables/file_process.js'
+import Loading from 'vue-loading-overlay';
+import 'vue-loading-overlay/dist/css/index.css';
 
 
 let username = ref(null)
@@ -19,6 +21,7 @@ let file_length = ref(null)
 let file_type = ref(null)
 let customImageMaxSize = ref(3)
 let is_submit_button_shown = ref(true)
+let spin_loading = ref(false)
 
 let body = ref(null)
 let body_warning_message = ref(null)
@@ -40,8 +43,8 @@ username = sessionStorage.getItem("username")
 
 
 let button_types = [
-  { id:'quick_reply',title: "Quick reply" },
-  { id:'nothing',title: "Re-Choice" },
+  { id:'nothing',title: "Please choose" },  
+  { id:'quick_reply',title: "Quick reply" }
 ]
 
 let languages = [
@@ -169,6 +172,7 @@ function submit(){
         data['template_name'] = template_name.value
         data['category'] = 'UTILITY'
         data['component'] = []
+
         let file_type_format = null
         if(uploaded_file.value){
             let file_type_signal = file_type.value.split("/")[0]
@@ -210,15 +214,24 @@ function submit(){
             
           }
         }
-        data['component'].push(
-            {
-                "type": "body",
-                "text": body.value,
-                "example": {
-                    "body_text": variables
-                }
-            }
-        )
+        if(body_variables.value.length == 0){
+          data['component'].push(
+              {
+                  "type": "body",
+                  "text": body.value
+              }
+          )
+        } else {
+          data['component'].push(
+              {
+                  "type": "body",
+                  "text": body.value,
+                  "example": {
+                      "body_text": variables
+                  }
+              }
+          )
+        }
         if(buttons.value.length > 0){
           let buttons_components = []
           buttons.value.forEach((item) => {
@@ -236,19 +249,22 @@ function submit(){
 }
 
 async function submitForm(payload){
+  spin_loading.value = true
   let data = await postRequest("generate_choicetemplate",payload,token)
   if(data.request.status == 200){
     if(data['data']['error']){
+      spin_loading.value = false
       let notification_message = responseMessage(data)
       emit('showtoast',notification_message)
     } else {
+      spin_loading.value = false
       let notification_message = "template is created successfully."
       emit('showtoast',notification_message)
       //emit("gettemplates");
       //resetData();
     }
   } else {
-    console.log(data)
+    spin_loading.value = false
   }
 }
 
@@ -257,6 +273,8 @@ async function submitForm(payload){
 
 
 <template>
+  <loading v-model:active="spin_loading"
+  :is-full-page="true"/>
   <card-body class="pb-2">
     <div class="row">
       <div class="col-md-12">

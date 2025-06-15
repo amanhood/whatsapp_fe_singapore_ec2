@@ -5,6 +5,8 @@ import { getRequest,postRequest } from '../composables/api.js'
 import { responseMessage } from '../composables/response_message.js'
 import { fileProcess } from '../composables/file_process.js'
 import 'vue-select/dist/vue-select.css';
+import Loading from 'vue-loading-overlay';
+import 'vue-loading-overlay/dist/css/index.css';
 
 let username = ref(null)
 let token = ref(null)
@@ -14,7 +16,7 @@ let template_name = ref(null)
 let header = ref(null)
 let header_variables = ref([])
 let header_warning_message = ref(null)
-
+let spin_loading = ref(false)
 
 let uploaded_file = ref(null)
 let file_name = ref(null)
@@ -297,23 +299,28 @@ function submit(){
 }
 
 async function submitForm(payload){
+  spin_loading.value = true
   let data = await postRequest("generate_generaltemplate",payload,token)
   if(data.request.status == 200){
     if(data['data']['error']){
+      spin_loading.value = false
       let notification_message = responseMessage(data)
       emit('showtoast',notification_message)
     } else {
+      spin_loading.value = false
       let notification_message = "template is created successfully."
       emit('showtoast',notification_message)
     }
   } else {
-    console.log(data)
+    spin_loading.value = false
   }
 }
 
 </script>
 
 <template>
+  <loading v-model:active="spin_loading"
+  :is-full-page="true"/>
   <card-body class="pb-2">
     <div class="row">
       <div class="col-md-12">

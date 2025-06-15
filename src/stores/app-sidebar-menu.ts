@@ -42,11 +42,15 @@ export const useAppSidebarMenuStore = defineStore({
 			icon: 'fa fa-cog',
 			text: 'Manage templates'
 		},
-		,
 		{
 			url: '/page/send_message_records',
 			icon: 'fa fa-user-circle',
-			text: 'Sent records'
+			text: 'Sent message records'
+		},
+		{
+			url: '/page/client_choice_records',
+			icon: 'fa fa-user-circle',
+			text: 'Client choice records'
 		},
 		{
 			is_divider: true
