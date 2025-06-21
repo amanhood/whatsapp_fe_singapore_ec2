@@ -52,7 +52,7 @@ app.component('VueBase64FileUpload', VueBase64FileUpload);
 app.use(createPinia());
 app.use(router);
 app.use(Vue3ProgressPlugin);
-//app.use(PerfectScrollbar);
+app.use(PerfectScrollbar);
 app.use(vue3Spinner)
 app.use(PaginationBar)
 

@@ -13,6 +13,19 @@ export async function userRequest(path = null,payload){
   }
 }
 
+export async function userRequestWithToken(path = null,payload,user_token){
+    try {
+        const response = await axios.post(BASE_LOGIN_URL + path + "/",payload,{
+            headers:{
+                Authorization: "Token "+user_token
+            }
+        })
+        return response
+    } catch(error) {
+        return error
+    }
+  }
+
 export async function getRequest(path = null,user_token){
   try {
       const response = await axios.get(BASE_LOGIN_URL + path + "/",{

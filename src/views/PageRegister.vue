@@ -31,7 +31,7 @@ export default {
 	methods: {
 		async submitForm() {
 			let payload = {'email':this.email,'username':this.username,'password':this.password}
-			let data = await userRequest("users",payload)
+			let data = await userRequest("register",payload)
 			if(data.request.status == 201){
 				alert("login success")
 				this.$router.push('/page/login');
@@ -41,33 +41,33 @@ export default {
 			//this.$router.push('/');
 		},
 		validateEmail(email) {
-      if (/^\w+([\.-]?\w+)*@\w+([\.-]?\w+)*(\.\w{2,3})+$/.test(email)) {
-        this.email_error_message = null
-				this.is_button_shown = true
-      } else {
-        this.email_error_message = "Invalid email address"
-				this.is_button_shown = false
-      }
-    },
+			if (/^\w+([\.-]?\w+)*@\w+([\.-]?\w+)*(\.\w{2,3})+$/.test(email)) {
+				this.email_error_message = null
+						this.is_button_shown = true
+			} else {
+				this.email_error_message = "Invalid email address"
+						this.is_button_shown = false
+			}
+		},
 		confirmPassword(confirm_password){
-				if (confirm_password == this.password){
-					this.password_error_message = null
-					this.is_button_shown = true
-				} else {
-					this.password_error_message = "Confirm password does not match with password"
-					this.is_button_shown = false
-				}
+			if (confirm_password == this.password){
+				this.password_error_message = null
+				this.is_button_shown = true
+			} else {
+				this.password_error_message = "Confirm password does not match with password"
+				this.is_button_shown = false
+			}
 		}
 	},
 	watch: {
-    email(value){
-      this.email = value;
-      this.validateEmail(value);
-    },
+		email(value){
+		this.email = value;
+		this.validateEmail(value);
+		},
 		confirmed_password(value){
 			this.confirmPassword(value)
 		}
-  }
+	}
 }
 </script>
 <template>

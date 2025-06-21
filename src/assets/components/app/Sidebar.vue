@@ -1,22 +1,77 @@
 <script setup lang="ts">
 import { useAppSidebarMenuStore } from '@/stores/app-sidebar-menu';
 import { useAppOptionStore } from '@/stores/app-option';
-import { onMounted,ref } from 'vue';
+import { onMounted,ref, computed, watch,nextTick } from 'vue';
 import { slideToggle } from '@/composables/slideToggle.js';
 import { slideUp } from '@/composables/slideUp.js';
 import { slideDown } from '@/composables/slideDown.js';
 import SidebarNav from '@/assets/components/app/SidebarNav.vue';
 import { getRequest,postRequest,deleteRequest } from '@/composables/api.js'
 
+
 let menu = ref([])
 let username = ref(null)
 let token = ref(null)
+let role = ref(sessionStorage.getItem('role'))
 let whatsapp_accounts_number = ref(0)
-token = sessionStorage.getItem("token")
-username = sessionStorage.getItem("username")
+token = ref(sessionStorage.getItem("token"))
+username = ref(sessionStorage.getItem("username"))
 whatsapp_accounts_number.value = sessionStorage.getItem("whatsapp_accounts_number")
+const scrollbarRef = ref<HTMLElement | null>(null)
+// const appSidebarMenu = useAppSidebarMenuStore();
+// const menuItems = computed(() => appSidebarMenu.filteredMenuItems)
 
-const appSidebarMenu = useAppSidebarMenuStore();
+const fullMenu = [
+	{ text: 'Login System', is_header: true },
+	{ url: '/page/login', icon: 'fa fa-user-circle', text: 'Logout' },
+	{ is_divider: true },
+	{ text: 'Sub-Account Management', is_header: true },
+	{ url: '/page/sub-accounts', icon: 'fa fa-user-circle', text: 'Management' },
+	{ is_divider: true },
+	{ text: 'Whatsapp and Business Account', is_header: true },
+	{ url: '/page/connect_whatsapp', icon: 'fa fa-user-circle', text: 'Connect whatsapp' },
+	{ url: '/page/connect-business-account', icon: 'fa fa-user-circle', text: 'Connect business' },
+	{ is_divider: true },
+	{ text: 'Messages', is_header: true },
+	{ url: '/page/check-messages', icon: 'fa fa-cog', text: 'Check messages' },
+	{ is_divider: true },
+	{ text: 'Marketing Message', is_header: true },
+	{ url: '/page/marketing_templates', icon: 'fa fa-cog', text: 'Manage templates' },
+	{ url: '/page/send_message_records', icon: 'fa fa-user-circle', text: 'Sent message records' },
+	{ url: '/page/client_choice_records', icon: 'fa fa-user-circle', text: 'Client choice records' },
+	{ is_divider: true },
+	{ text: 'Auto Reply of Whatspp Account', is_header: true },
+	{ url: '/page/flow_index', icon: 'fa fa-cog', text: 'Manage' },
+	{ is_divider: true },
+	{ text: 'Whatsapp Ecommerce', is_header: true },
+	{ url: '/page/whatsapp-ecommerce', icon: 'fa fa-cog', text: 'Catalogue and Product' },
+	{ url: '/page/delivery_fee_setting', icon: 'fa fa-cog', text: 'Delivery Fee Setting' },
+	{ is_divider: true },
+	{ text: 'Ecommerce orders', is_header: true },
+	{ url: '/page/order', icon: 'fa fa-cog', text: 'Check orders' },
+	{ is_divider: true }
+]
+const menuItems = ref([])
+
+const updateMenuByRole = (role: string | null) => {
+  if (role === 'child') {
+    menuItems.value = fullMenu.filter(
+      (item) => item.text === 'Messages' || item.url === '/page/messages'
+    )
+  } else {
+    menuItems.value = fullMenu
+  }
+}
+
+watch(() => role.value, (newRole) => {
+  updateMenuByRole(newRole)
+})
+
+// onMounted(() => {
+  
+// })
+
+
 const appOption = useAppOptionStore();
 var appSidebarFloatSubmenuTimeout = 0;
 var appSidebarFloatSubmenuDom = '';
@@ -40,7 +95,8 @@ function handleSidebarMinifyFloatMenuClick() {
 				slideToggle(target);
 				
 				var loopHeight = setInterval(function() {
-					var targetMenu = document.querySelector('.app-float-submenu');
+					var targetMenu = document.querySelector('.app-float-submenu') as HTMLElement | null;
+					if (!targetMenu) return;
 					var targetHeight = targetMenu.clientHeight;
 					var targetOffset = targetMenu.getBoundingClientRect();
 					var targetOriTop = Number(targetMenu.getAttribute('data-offset-top'));
@@ -58,7 +114,7 @@ function handleSidebarMinifyFloatMenuClick() {
 						if ((windowHeight - targetTop) < targetHeight) {
 							var arrowBottom = (windowHeight - targetMenuTop) - 22;
 							targetMenu.style.top = 'auto';
-							targetMenu.style.bottom = 0;
+							targetMenu.style.bottom = '0';
 						}
 						var floatSubmenuElm = document.querySelector('.app-float-submenu');
 						if (targetHeight > windowHeight) {
@@ -81,6 +137,7 @@ function handleSidebarMinifyFloatMenuClick() {
 
 function handleSidebarMinifyFloatMenu() {
 	var elms = [].slice.call(document.querySelectorAll('.app-sidebar .menu > .menu-item.has-sub > .menu-link'));
+	let floatSubmenuElm: HTMLElement | null = null;
 	if (elms) {
 		elms.map(function(elm) {
 			elm.onmouseenter = function() {
@@ -97,7 +154,11 @@ function handleSidebarMinifyFloatMenu() {
 					if (targetMenuHtml) {
 						var bodyStyle     = getComputedStyle(document.body);
 						var sidebarOffset = document.querySelector('.app-sidebar').getBoundingClientRect();
-						var sidebarWidth  = parseInt(document.querySelector('.app-sidebar').clientWidth);
+						const sidebar = document.querySelector('.app-sidebar') as HTMLElement | null;
+						if (!sidebar) return;
+
+						var sidebarWidth = sidebar.clientWidth;
+						//var sidebarWidth  = parseInt(document.querySelector('.app-sidebar').clientWidth);
 						var sidebarX      = (bodyStyle.getPropertyValue('direction') != 'rtl') ? (sidebarOffset.left + sidebarWidth) : (document.body.clientWidth - sidebarOffset.left);
 						var targetHeight  = handleGetHiddenMenuHeight(targetMenu);
 						var targetOffset  = this.getBoundingClientRect();
@@ -145,21 +206,24 @@ function handleSidebarMinifyFloatMenu() {
 							floatSubmenuElm.innerHTML = targetMenuHtml;
 						}
 				
-						var targetHeight = document.querySelector('.app-float-submenu').clientHeight;
-						var floatSubmenuElm = document.querySelector('.app-float-submenu');
+						const submenuElm = document.querySelector('.app-float-submenu') as HTMLElement | null;
+						if (submenuElm) {
+							const targetHeight = submenuElm.clientHeight;
+						}
+						floatSubmenuElm = document.querySelector('.app-float-submenu') as HTMLElement | null;
 						if ((windowHeight - targetTop) > targetHeight) {
-							if (floatSubmenuElm) {
-								floatSubmenuElm.style.top = targetTop + 'px';
-								floatSubmenuElm.style.left = targetLeft + 'px';
-								floatSubmenuElm.style.bottom = 'auto';
-								floatSubmenuElm.style.right = targetRight + 'px';
+							if (floatSubmenuElm instanceof HTMLElement) {
+							floatSubmenuElm.style.top = `${targetTop}px`;
+							floatSubmenuElm.style.bottom = 'auto';
+							floatSubmenuElm.style.left = typeof targetLeft === 'number' ? `${targetLeft}px` : targetLeft;
+							floatSubmenuElm.style.right = typeof targetRight === 'number' ? `${targetRight}px` : targetRight;
 							}
 						} else {
 							var arrowBottom = (windowHeight - targetTop) - 21;
-							if (floatSubmenuElm) {
+							if (floatSubmenuElm instanceof HTMLElement) {
 								floatSubmenuElm.style.top = 'auto';
 								floatSubmenuElm.style.left = targetLeft + 'px';
-								floatSubmenuElm.style.bottom = 0;
+								floatSubmenuElm.style.bottom = "0";
 								floatSubmenuElm.style.right = targetRight + 'px';
 							}
 						}
@@ -191,6 +255,10 @@ function handleGetHiddenMenuHeight(elm) {
 }
 
 onMounted(() => {
+	updateMenuByRole(role.value)
+	nextTick(() => {
+		scrollbarRef.value?.update?.()
+	})
 	var handleSidebarMenuToggle = function(menus, expandTime) {
 		menus.map(function(menu) {
 			menu.onclick = function(e) {
@@ -227,27 +295,43 @@ onMounted(() => {
 	// menu
 	var menuLinkSelector =  menuBaseSelector + ' > .menu-link';
 	var menus = [].slice.call(document.querySelectorAll(menuLinkSelector));
-	handleSidebarMenuToggle(menus);
+	handleSidebarMenuToggle(menus,undefined);
 
 	// submenu lvl 1
 	var submenuLvl1Selector = menuBaseSelector + submenuBaseSelector;
 	var submenusLvl1 = [].slice.call(document.querySelectorAll(submenuLvl1Selector + ' > .menu-link'));
-	handleSidebarMenuToggle(submenusLvl1);
+	handleSidebarMenuToggle(submenusLvl1,undefined);
 
 	// submenu lvl 2
 	var submenuLvl2Selector = menuBaseSelector + submenuBaseSelector + submenuBaseSelector;
 	var submenusLvl2 = [].slice.call(document.querySelectorAll(submenuLvl2Selector + ' > .menu-link'));
-	handleSidebarMenuToggle(submenusLvl2);
-	
-	
+	handleSidebarMenuToggle(submenusLvl2,undefined);	
 	handleSidebarMinifyFloatMenu();
+
+
 });
 </script>
+
+<style>
+.app-sidebar {
+  height: 100vh;
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+}
+
+.app-sidebar-content {
+  flex: 1;
+  min-height: 0;
+  overflow: hidden;
+}
+</style>
+
 <template>
-	<div id="sidebar" class="app-sidebar">
-		<perfect-scrollbar class="app-sidebar-content">
-			<div class="menu">
-				<template v-for="menu in appSidebarMenu">
+	<div id="sidebar" class="app-sidebar h-screen flex flex-col overflow-hidden">
+		<perfect-scrollbar ref="scrollbarRef" class="app-sidebar-content flex-1 overflow-hidden">
+			<div class="menu" style="height: 1000px;">
+				<template v-for="menu in menuItems">
 					<div class="menu-header" v-if="menu.is_header">{{ menu.text }}</div>
 					<div class="menu-divider" v-else-if="menu.is_divider"></div>
 					<template v-else>

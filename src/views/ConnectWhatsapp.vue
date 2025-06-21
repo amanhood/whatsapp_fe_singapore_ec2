@@ -25,7 +25,8 @@ let whatsapp_accounts = ref([])
 let fbcode = ref(null)
 let phone_number = ref(null)
 let waba = ref(null)
-
+let role = ref(null)
+role = sessionStorage.getItem("role")
 
 async function generateClientAccessToken(fbcode,waba,phone_number,token){
   let payload = {}

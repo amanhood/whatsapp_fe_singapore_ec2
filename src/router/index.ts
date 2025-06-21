@@ -3,6 +3,8 @@ import { createRouter, createWebHistory } from "vue-router";
 const router = createRouter({
   history: createWebHistory(import.meta.env.BASE_URL),
   routes: [
+	{ path: '/page/check-messages', component: () => import('../views/CheckMessages.vue') },
+	{ path: '/page/sub-accounts', component: () => import('../views/SubAccounts.vue') },
 	{ path: '/page/client_choice_records', component: () => import('../views/ClientChoiceRecords.vue') },
 	{ path: '/page/send_message_records', component: () => import('../views/SentMessageRecords.vue') },
 	{ path: '/page/chat_flow', component: () => import('../views/ChatFlow.vue') },

@@ -9,6 +9,7 @@ import AppFooter from '@/assets/components/app/Footer.vue';
 import AppThemePanel from '@/assets/components/app/ThemePanel.vue';
 import router from './router';
 
+
 const appOption = useAppOptionStore();
 const internalInstance = getCurrentInstance();
 

@@ -35,8 +35,12 @@ export default {
 				this.token = data.data.token
 				let username = data.data.username
 				let access_token = data.data.access_token
+				let role = data.data.role
+				let id = data.data.id
 				sessionStorage.setItem("token",this.token)
 				sessionStorage.setItem("username",username)
+				sessionStorage.setItem("role",role)
+				sessionStorage.setItem("id",id)
 				this.$router.push('/page/connect_whatsapp');
 			} else {
 				let message = "Login Failed, Your account may be blocked by some reasons"
@@ -55,6 +59,7 @@ export default {
 		//console.log(userSession.token)
 		sessionStorage.removeItem("username")
 		sessionStorage.removeItem("token")
+		sessionStorage.removeItem("role")
 	}
 }
 </script>
