@@ -41,7 +41,11 @@ export default {
 				sessionStorage.setItem("username",username)
 				sessionStorage.setItem("role",role)
 				sessionStorage.setItem("id",id)
-				this.$router.push('/page/connect_whatsapp');
+				if(role == 'child'){
+					this.$router.push('/page/check-messages');
+				} else {
+					this.$router.push('/page/connect_whatsapp');
+				}
 			} else {
 				let message = "Login Failed, Your account may be blocked by some reasons"
 				this.showToast(message)

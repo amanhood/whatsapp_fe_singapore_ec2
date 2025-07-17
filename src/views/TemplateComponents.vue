@@ -1,5 +1,5 @@
 <script setup>
-import { useUserSessionStore } from '@/stores/user-session';
+import { useAppOptionStore } from '@/stores/app-option';
 import { ref,watch,onMounted } from 'vue'
 import { getRequest,postRequest } from '../composables/api.js'
 import { responseMessage } from '../composables/response_message.js'
@@ -12,7 +12,7 @@ import { saveAs } from "file-saver";
 import Loading from 'vue-loading-overlay';
 import 'vue-loading-overlay/dist/css/index.css';
 
-
+const appOption = useAppOptionStore();
 const props = defineProps(['component','template_name','template_category','waba_id','phone_number_id',"template_type","business_account_id","products"])
 onMounted(() => {
   // console.log(props.component);

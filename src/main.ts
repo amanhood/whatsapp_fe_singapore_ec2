@@ -2,7 +2,8 @@ import { createApp } from 'vue';
 import { createPinia } from 'pinia';
 import { Vue3ProgressPlugin } from '@marcoschulte/vue3-progress';
 import mitt from 'mitt';
-import 'vue3-perfect-scrollbar/dist/vue3-perfect-scrollbar.css';
+import { PerfectScrollbarPlugin} from 'vue3-perfect-scrollbar'
+import 'vue3-perfect-scrollbar/style.css';
 import '@marcoschulte/vue3-progress/dist/index.css';
 import '@fortawesome/fontawesome-free/scss/fontawesome.scss';
 import '@fortawesome/fontawesome-free/scss/regular.scss';
@@ -14,7 +15,6 @@ import 'bootstrap';
 import './scss/styles.scss';
 import vSelect from "vue-select";
 import VueBase64FileUpload from 'vue-base64-file-upload';
-import PerfectScrollbar from 'vue3-perfect-scrollbar';
 import App from './App.vue';
 import router from './router';
 
@@ -52,7 +52,7 @@ app.component('VueBase64FileUpload', VueBase64FileUpload);
 app.use(createPinia());
 app.use(router);
 app.use(Vue3ProgressPlugin);
-app.use(PerfectScrollbar);
+app.use(PerfectScrollbarPlugin);
 app.use(vue3Spinner)
 app.use(PaginationBar)
 

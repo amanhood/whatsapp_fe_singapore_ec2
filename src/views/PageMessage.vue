@@ -24,7 +24,7 @@ let notification_message = ref(null)
 let uploaded_file = ref(null)
 let file_name = ref(null)
 let file_type = ref(null)
-let receipent = ref(null)
+let recipient = ref(null)
 let whatsapp_accounts = []
 let is_shown_templates = ref(null)
 let selected_waba_account = ref(null)
@@ -73,7 +73,7 @@ async function sendMessage(){
   payload['file'] = uploaded_file.value
   payload['file_name'] = file_name.value
   payload['file_type'] = file_type.value
-  payload['receipent'] = receipent.value
+  payload['recipient'] = recipient.value
   let data = await postRequest("send_media_message",payload,token)
   if(data.request.status == 200){
     if(data['data']['error']){
@@ -93,7 +93,7 @@ async function sendTextMessage(){
   payload['phone_number_id'] = selected_phone_number_id.value
   payload['waba_id'] = selected_waba_account.value
   payload['text_message'] = text_message.value
-  payload['receipent'] = receipent.value
+  payload['recipient'] = recipient.value
   let data = await postRequest("send_text_message",payload,token)
   if(data.request.status == 200){
     if(data['data']['error']){
@@ -165,7 +165,7 @@ checkWaba()
             <div class="col-xl-12">
               <div class="row">
                 <div class="col-md-4">
-                  <input type="file" class="form-control" id="defaultFile" @change="uploadFile" accept="image/*,application/pdf"/>
+                  <input type="file" class="form-control" id="defaultFile" @change="uploadFile" accept="image/*,application/pdf,video/*"/>
                 </div>
                 <div class="col-md-4">
                   <input type="text" class="form-control" placeholder="852+mobile number" v-model="receipent"/>
@@ -188,7 +188,7 @@ checkWaba()
                   <textarea class="form-control" id="defaultFile" rows="6" v-model="text_message"/>
                 </div>
                 <div class="col-md-4">
-                  <input type="text" class="form-control" placeholder="852+mobile number" v-model="receipent"/>
+                  <input type="text" class="form-control" placeholder="852+mobile number" v-model="recipient"/>
                 </div>
                 <div class="col-md-2">
                   <button class="btn btn-default rounded-0" type="button" @click="sendTextMessage"><span class="d-none d-md-inline">Send</span></button>

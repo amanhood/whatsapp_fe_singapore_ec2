@@ -1,18 +1,14 @@
 <script setup>
-import { useUserSessionStore } from '@/stores/user-session';
 import { ref,watch,onMounted, onUnmounted,getCurrentInstance } from 'vue'
 import { getRequest,postRequest,deleteRequest} from '../composables/api.js'
 import { Toast } from 'bootstrap';
 import { useRouter, RouterLink } from 'vue-router';
-import draggable from 'vuedraggable'
-import { PerfectScrollbar } from 'vue3-perfect-scrollbar'
 import Loading from 'vue-loading-overlay';
-import { responseMessage } from '../composables/response_message.js'
-import readXlsxFile from 'read-excel-file'
 import TemplateComponents from './TemplateComponents.vue'
 import 'vue-select/dist/vue-select.css';
 import 'vue-loading-overlay/dist/css/index.css';
-
+import { useAppOptionStore } from '@/stores/app-option';
+const appOption = useAppOptionStore();
 const router = useRouter()
 
 let spin_loading = ref(false)

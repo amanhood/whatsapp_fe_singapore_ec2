@@ -1,13 +1,6 @@
 <script setup>
-import { useUserSessionStore } from '@/stores/user-session';
 import { ref } from 'vue'
 import { getRequest,postRequest,deleteRequest } from '../composables/api.js'
-import TemplateComponents from './TemplateComponents.vue'
-import CreateTemplate from './CreateTemplate.vue'
-import LtoTemplate from './LtoTemplate.vue'
-import DocsTemplate from './DocsTemplate.vue'
-import ProductsTemplate from './ProductsTemplate.vue'
-import FlowTemplate from './FlowTemplate.vue'
 import { Toast } from 'bootstrap';
 import { useRouter, RouterLink } from 'vue-router';
 const router = useRouter()
