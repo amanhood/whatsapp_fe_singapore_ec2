@@ -13,14 +13,16 @@ import { getRequest,postRequest,deleteRequest,putRequest,formdataRequest } from 
 import { Toast } from 'bootstrap';
 import Loading from 'vue-loading-overlay';
 import 'vue-loading-overlay/dist/css/index.css';
+import { useRouter, RouterLink } from 'vue-router';
 
-
+const router = useRouter()
 // Define reactive nodes and edges
 const state = window.history.state
 
 
 let token = ref(null)
 let username = ref(null)
+let role = ref(null)
 let selected_waba_account = ref(state.waba_id)
 let selected_phone_number_id = ref(state.phone_number_id)
 let selected_phone_number = ref(state.phone_number)
@@ -29,10 +31,22 @@ let parent_id = ref(null)
 let isLoading = ref(false)
 token = sessionStorage.getItem("token")
 username = sessionStorage.getItem("username")
+role.value = sessionStorage.getItem("role")
 let is_interactive_list_existed = ref(false)
 let is_autoreplymessage_existed = ref(false)
 let selected_node = ref(null)
 let selected_interactivelist = ref(null)
+
+function checkLogin(){
+  if(!token){
+    router.push('/page/login');
+  } else {
+    if (role.value != 'parent'){
+        router.push('/page/login');
+    } 
+  }
+}
+
 
 onMounted(() => {
   if(state.message){
@@ -142,12 +156,6 @@ let sections = ref([
   }
 ])
 
-
-function checkLogin(){
-  if(!token){
-    router.push('/page/login');
-  }
-}
 
 let baseX = 210; // Horizontal spacing between nodes
 let baseY = 5;  // Reduced vertical spacing to keep nodes higher

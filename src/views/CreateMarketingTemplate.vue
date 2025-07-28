@@ -12,9 +12,12 @@ import ProductsTemplate from './ProductsTemplate.vue'
 import ChoiceTemplate from './ChoiceTemplate.vue'
 import FlowTemplate from './FlowTemplate.vue'
 import { Toast } from 'bootstrap';
+import { useRouter, RouterLink } from 'vue-router';
 
+const router = useRouter()
 let username = ref(null)
 let token = ref(null)
+let role = ref(null)
 let template_type = ref(null)
 let template_types = [
         { id:'general_template',title: "General message template" },
@@ -30,6 +33,7 @@ let notification_message = ref(null)
 
 token = sessionStorage.getItem("token")
 username = sessionStorage.getItem("username")
+role.value = sessionStorage.getItem("role")
 
 async function checkWaba(){
   let data = await postRequest("check_waba",null,token)
@@ -47,6 +51,17 @@ function showToast(message) {
   toast.show();
 }
 
+function checkLogin(){
+  if(!token){
+    router.push('/page/login');
+  } else {
+    if (role.value != 'parent'){
+        router.push('/page/login');
+    } 
+  }
+}
+
+checkLogin()
 checkWaba()
 
 </script>

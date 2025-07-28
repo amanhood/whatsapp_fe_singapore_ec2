@@ -14,6 +14,7 @@ const router = useRouter()
 let spin_loading = ref(false)
 let username = ref(null)
 let token = ref(null)
+let role = ref(null)
 let template = ref(null)
 let select_account = ref(null)
 let selected_waba_account = ref(null)
@@ -35,6 +36,21 @@ let products = ref([])
 
 token = sessionStorage.getItem("token")
 username = sessionStorage.getItem("username")
+role.value = sessionStorage.getItem("role")
+
+
+function checkLogin(){
+  if(!token){
+    router.push('/page/login');
+  } else {
+    if (role.value != 'parent'){
+        router.push('/page/login');
+    } 
+  }
+}
+
+checkLogin()
+
 const state = history.state
 template = JSON.parse(state.template)
 
@@ -158,6 +174,7 @@ async function showProducts(catalog_id){
 		showToast(message)
 	}
 }
+
 
 checkWaba()
 updateTemplateComponent()

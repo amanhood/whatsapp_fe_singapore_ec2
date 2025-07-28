@@ -6,7 +6,7 @@ import { ProgressFinisher, useProgress } from '@marcoschulte/vue3-progress';
 import AppSidebar from '@/assets/components/app/Sidebar.vue';
 import AppHeader from '@/assets/components/app/Header.vue';
 import AppFooter from '@/assets/components/app/Footer.vue';
-import AppThemePanel from '@/assets/components/app/ThemePanel.vue';
+//import AppThemePanel from '@/assets/components/app/ThemePanel.vue';
 import router from './router';
 
 

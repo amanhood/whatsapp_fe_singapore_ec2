@@ -20,7 +20,7 @@ let selected_waba_account = ref(null)
 let selected_phone_number_id = ref(null)
 token = sessionStorage.getItem("token")
 username = sessionStorage.getItem("username")
-role = sessionStorage.getItem("role")
+role.value = sessionStorage.getItem("role")
 let parent_id = ref(sessionStorage.getItem("id"))
 
 let sub_username = ref(null)
@@ -43,7 +43,7 @@ function checkLogin(){
   if(!token){
     router.push('/page/login');
   } else {
-    if(role == 'child'){
+    if(role.value != 'parent'){
         router.push('/page/login');
     }
   }

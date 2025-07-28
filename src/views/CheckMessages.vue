@@ -11,14 +11,14 @@ import { fileProcess } from '../composables/file_process.js'
 import 'vue-select/dist/vue-select.css';
 import 'vue-loading-overlay/dist/css/index.css';
 import { Toast } from 'bootstrap';
-import { Camera, Video,File, Dock , X, Check, CircleUserRound} from 'lucide-vue-next'
+import { Camera, Video,File, Dock , X, Check, CircleUserRound, List} from 'lucide-vue-next'
 
 const appOption = useAppOptionStore();
 let username = ref(null)
 let token = ref(null)
 let role = ref(null)
 token = sessionStorage.getItem("token")
-username = sessionStorage.getItem("username")
+username.value = sessionStorage.getItem("username")
 role = sessionStorage.getItem("role")
 let whatsapp_accounts = ref([])
 let select_account = ref(null)
@@ -45,6 +45,12 @@ const droppedImagePreview = ref(null);
 let uploaded_file = ref({})
 const reloadingContacts = ref(false)
 const reloadingConversations = ref(false)
+let remark_categories = ref([])
+let select_remark_category = ref(null)
+let remark = ref(null)
+let customer_remarks = ref([])
+let selected_phone_number = ref(null)
+const replyToMessage = ref(null)
 
 
 async function checkWaba(){
@@ -137,6 +143,7 @@ function connectToSockets() {
         ws.onclose = () => {
             console.warn(`🔌 WebSocket closed for ${groupKey}`)
             socketMap.delete(groupKey)
+            setTimeout(() => connectToSockets(), 3000)
         }
         socketMap.set(groupKey, ws)
     }
@@ -177,6 +184,15 @@ function onContactClick(contact){
     conversation_page.value = 0
     getConversations(contact)
     selected_customer.value = contact
+    if(selected_customer.value.direction == 'in'){
+        selected_phone_number.value = selected_customer.value.from_number
+    } else if (selected_customer.value.direction == 'out'){
+        selected_phone_number.value = selected_customer.value.to_number
+    }
+    selected_phone_number
+    debounceReloadContacts()
+    getRemarkCategories()
+    getRemarks()
 }
 
 function formatDate(delivery_datetime){
@@ -201,6 +217,30 @@ function messageFormatDate(delivery_datetime){
     if (!delivery_datetime) return '';
     const date = new Date(delivery_datetime);
     date.setHours(date.getHours() - 8); // Convert from UTC to HK time
+    const now = new Date();
+    // Strip time part to compare date only
+    const inputMidnight = new Date(date.getFullYear(), date.getMonth(), date.getDate());
+    const nowMidnight = new Date(now.getFullYear(), now.getMonth(), now.getDate());
+    const diffInDays = Math.floor((nowMidnight - inputMidnight) / (1000 * 60 * 60 * 24));
+    const timeStr = date.toTimeString().slice(0, 5); // HH:mm
+    if (diffInDays === 0) {
+        return timeStr;
+    } else if (diffInDays === 1) {
+        return `Yesterday ${timeStr}`;
+    } else if (diffInDays === 2) {
+        return `2 days ago ${timeStr}`;
+    } else {
+        const yyyy = date.getFullYear();
+        const mm = String(date.getMonth() + 1).padStart(2, '0');
+        const dd = String(date.getDate()).padStart(2, '0');
+        return `${yyyy}-${mm}-${dd} ${timeStr}`;
+    }
+}
+
+function remarkFormatDate(delivery_datetime){
+    if (!delivery_datetime) return '';
+    const date = new Date(delivery_datetime);
+    //date.setHours(date.getHours() - 8); // Convert from UTC to HK time
     const now = new Date();
     // Strip time part to compare date only
     const inputMidnight = new Date(date.getFullYear(), date.getMonth(), date.getDate());
@@ -262,6 +302,7 @@ function getFileExtension(url) {
 }
 
 async function sendMessage(){
+    console.log(username.value)
     if(text_message.value){
         uploaded_file.value = {}
         spin_loading.value = true
@@ -269,6 +310,10 @@ async function sendMessage(){
         payload['waba_id'] = selected_waba_account.value
         payload['phone_number_id'] = selected_phone_number_id.value
         payload['text_message'] = text_message.value
+        payload['username'] = username.value
+        if(replyToMessage.value){
+            payload['reply_message_id'] = replyToMessage.value.message_id
+        }
         if(selected_customer.value.direction == 'in'){
             payload['recipient'] = selected_customer.value.from_number
         } else if (selected_customer.value.direction == 'out'){
@@ -289,6 +334,7 @@ async function sendMessage(){
 }
 
 async function sendMediaMessage(){
+    uploaded_file.value.reply_message_id = replyToMessage.value?.message_id || null;
     spin_loading.value = true
     let response = await postRequest("send_media_message",uploaded_file.value,token)
     if(response.request.status == 200){
@@ -299,6 +345,7 @@ async function sendMediaMessage(){
     }
     spin_loading.value = false
 }
+
 
 async function handleDrop(event){
     event.preventDefault();
@@ -320,7 +367,11 @@ async function handleDrop(event){
                 : selected_customer.value.to_number,
             file: droppedImage.value,
             file_type: file.type,
-            file_name: file.name
+            file_name: file.name,
+            username: username.value
+        }
+        if (replyToMessage.value && replyToMessage.value.message_id) {
+            uploaded_file.value.reply_message_id = replyToMessage.value.message_id;
         }
     }
     reader.readAsDataURL(file)
@@ -359,6 +410,74 @@ function debounceReloadConversations(contact) {
   }, 300)
 }
 
+async function getRemarkCategories(){
+    let payload = {}
+    payload['waba_id'] = selected_waba_account.value
+    payload['phone_number_id'] = selected_phone_number_id.value
+    let response = await postRequest("get_remark_categories",payload,token)
+    if(response.status == 200){
+        remark_categories.value = response['data']['categories']
+    } else {
+      let notification_message = "System error"
+      showToast(notification_message)
+    }
+}
+
+async function createRemark(){
+    if (!select_remark_category.value){
+        notification_message.value = "Please select remark category first"
+        showToast(notification_message)
+        return
+    }
+
+    if (!remark.value){
+        notification_message.value = "Please type remark"
+        showToast(notification_message)
+        return
+    }
+    let payload = {}
+    payload['waba_id'] = selected_waba_account.value
+    payload['phone_number_id'] = selected_phone_number_id.value
+    payload['by_admin'] = username.value
+    payload['remarkcategory'] = select_remark_category.value
+    payload['remark'] = remark.value
+    if(selected_customer.value.direction == 'in'){
+        payload['phone_number'] = selected_customer.value.from_number
+    } else if (selected_customer.value.direction == 'out'){
+        payload['phone_number'] = selected_customer.value.to_number
+    }
+    let response = await postRequest("add_remark",payload,token)
+    if(response.status == 200){
+        notification_message.value = "Remark added"
+        showToast(notification_message)
+        getRemarks()
+    } else {
+        notification_message.value = "Failed to add remark"
+        showToast(notification_message)
+    }
+}
+
+async function getRemarks(){
+    let payload = {}
+    payload['waba_id'] = selected_waba_account.value
+    payload['phone_number_id'] = selected_phone_number_id.value
+    if(selected_customer.value.direction == 'in'){
+        payload['phone_number'] = selected_customer.value.from_number
+    } else if (selected_customer.value.direction == 'out'){
+        payload['phone_number'] = selected_customer.value.to_number
+    }
+    let response = await postRequest("get_remarks",payload,token)
+    if(response.status == 200){
+        customer_remarks.value = response['data']['remarks']
+    } else {
+        notification_message.value = "Failed to get remarks"
+        showToast(notification_message)
+    }
+}
+
+function clearReplyMessage(){
+    replyToMessage.value = null
+}
 
 checkLogin()
 checkWaba()
@@ -425,6 +544,24 @@ onBeforeUnmount(() => {
     socketMap.clear()
 
 })
+
+function selectConversation(conversation){
+    replyToMessage.value = conversation
+}
+
+function openNewTab() {
+  const newWindow = window.open('/page/marketing_templates', '_blank')
+  const sendToken = () => {
+    newWindow.postMessage({ token }, window.location.origin)
+  }
+
+  // Wait for new tab to load and request the token
+  window.addEventListener('message', (event) => {
+    if (event.source === newWindow && event.data === 'REQUEST_TOKEN') {
+      sendToken()
+    }
+  })
+}
 
 watch(text_message, (newVal, oldVal) => {
     droppedImage.value = null
@@ -543,6 +680,79 @@ watch(text_message, (newVal, oldVal) => {
   align-items: center;
   gap: 8px;
 }
+
+.reply-preview-box {
+  background-color: #f1f1f1;
+  border-left: 4px solid #1956cc;
+  padding: 8px 12px;
+  margin-bottom: 10px;
+  border-radius: 6px;
+  position: relative;
+  font-size: 14px;
+  color: #333;
+}
+
+.reply-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  font-weight: bold;
+  margin-bottom: 4px;
+}
+
+.reply-author {
+  color: #1956cc;
+}
+
+.reply-body {
+  font-style: italic;
+  color: #555;
+}
+
+.close-btn {
+  background: none;
+  border: none;
+  color: #999;
+  cursor: pointer;
+  font-size: 16px;
+  line-height: 1;
+}
+.close-btn:hover {
+  color: #ff4d4f;
+}
+.fade-enter-active,
+.fade-leave-active {
+  transition: opacity 0.3s;
+}
+.fade-enter-from,
+.fade-leave-to {
+  opacity: 0;
+}
+.clickable {
+  cursor: pointer;
+}
+.reply-inside {
+  border-left: 3px solid #1956cc;
+  background-color: #f0f0f0;
+  padding: 6px 10px;
+  margin-bottom: 6px;
+  border-radius: 6px;
+  font-size: 13px;
+  position: relative;
+}
+
+.reply-inside-author {
+  font-weight: 600;
+  color: #1956cc;
+  margin-bottom: 2px;
+}
+
+.reply-inside-content {
+  font-style: italic;
+  color: #555;
+  word-break: break-word;
+}
+
 </style>
 
 <template>
@@ -574,6 +784,9 @@ watch(text_message, (newVal, oldVal) => {
                     <div class="content">
                         <div class="messenger-item" v-for="(contact, index) in contacts_list">
                             <a href="#" data-toggle="messenger-content" class="messenger-link" :class="{ active: index === 0 }" @click.prevent="onContactClick(contact)">
+                                <div class="messenger-media">
+                                    <div class="messenger-badge">{{ contact.unread_count}}</div>
+                                </div>
                                 <div class="messenger-info">
                                     <div class="messenger-name">{{ contact.display_name }}</div>
                                     <div v-if="contact.message_type == 'text'">
@@ -599,6 +812,11 @@ watch(text_message, (newVal, oldVal) => {
                                             <Dock class="w-6 h-6 text-green-600" /> Marketing message
                                         </div>
                                     </div>
+                                    <div v-if="contact.message_type == 'interactivelist'">
+                                        <div class="messenger-text">
+                                            <List class="w-6 h-6 text-green-600" /> List
+                                        </div>
+                                    </div>
                                     
                                 </div>
                                 <div class="messenger-time-badge">
@@ -617,7 +835,7 @@ watch(text_message, (newVal, oldVal) => {
                 <div class="messenger-content-header-mobile-toggler"></div>
                 <div class="messenger-content-header-media"></div>
                 <div class="messenger-content-header-info">
-                    <h3 class="mb-0" v-if="selected_customer">{{selected_customer.display_name}}</h3>
+                    <h3 class="mb-0" v-if="selected_customer">{{selected_customer.display_name}} ({{ selected_phone_number }})</h3>
                 </div>
                 <!-- <div class="position-relative flex-1 ps-3">
                     <button type="submit" class="btn position-absolute top-0 text-inverse"><i class="bi bi-search"></i></button>
@@ -628,13 +846,31 @@ watch(text_message, (newVal, oldVal) => {
                 <perfect-scrollbar class="h-100">
                     <div class="widget-chat">
                         <div v-for="conversation, index in conversations" style="margin-bottom:5px;">
-                            <div class="widget-chat-item" :class="{ reply: conversation.direction !== 'in' }">
+                            <div class="widget-chat-item clickable" :class="{ reply: conversation.direction !== 'in' }" @dblclick=selectConversation(conversation)>
                                 <template v-if="conversation.direction === 'in'">
                                     <div class="widget-chat-media">
                                         <CircleUserRound class="w-6 h-6 text-blue-600" />
                                     </div>
                                 </template>
                                 <div class="widget-chat-content">
+                                    <div class="reply-inside" v-if="conversation.replied_message">
+                                        <div class="reply-inside-author">
+                                            {{ conversation.replied_message_direction === 'in' ? selected_customer.display_name : 'You' }}
+                                        </div>
+                                        <div class="reply-inside-content">
+                                            <template v-if="conversation.replied_message_type === 'text'">
+                                            {{ conversation.replied_message.slice(0, 100) }}
+                                            </template>
+                                            <template v-else-if="conversation.replied_message_type === 'image'">📷 Image</template>
+                                            <template v-else-if="conversation.replied_message_type === 'video'">🎬 Video</template>
+                                            <template v-else-if="conversation.replied_message_type === 'document'">📎 Document</template>
+                                            <template v-else-if="conversation.replied_message_type === 'template_message'">
+                                            {{ conversation.replied_message.replace(/^(api|normal|limited_time_offer|utility):\s*/i, '') }}
+                                            </template>
+                                            <template v-else-if="conversation.replied_message_type === 'interactivelist'">List</template>
+                                            <template v-else>Buttons</template>
+                                        </div>
+                                    </div>
                                     <div class="widget-chat-message" v-if="conversation.message_type == 'text'">
                                         {{conversation.message}}
                                     </div>
@@ -736,7 +972,8 @@ watch(text_message, (newVal, oldVal) => {
                                     <div class="widget-chat-status">
                                         {{messageFormatDate(conversation.last_time)}}
                                         <template v-if="conversation.delivery_status == 'failed'">
-                                            <X class="w-6 h-6 text-red-300" />
+                                            <X class="w-6 h-6 text-red-300" /><br>
+                                            {{ conversation.status_message }}<br> please use <a href="#" @click="openNewTab">marketing message </a> to send mesage to {{selected_customer.display_name}} directly
                                         </template>
                                         <template v-else>
                                             <Check class="w-6 h-6 text-green-300" />
@@ -749,6 +986,32 @@ watch(text_message, (newVal, oldVal) => {
                     </div>
                 </perfect-scrollbar>
             </div>
+            <transition name="fade">
+                <div v-if="replyToMessage" class="reply-preview-box">
+                    <div class="reply-header">
+                        <span class="reply-author">
+                        Replying to: {{ replyToMessage.direction === 'in' ? selected_customer.display_name : 'You' }}
+                        </span>
+                        <button class="close-btn" @click="clearReplyMessage">✖</button>
+                    </div>
+                    <div class="reply-body">
+                        <span v-if="replyToMessage.message_type === 'text'">
+                        {{ replyToMessage.message.slice(0, 100) }}
+                        </span>
+                        <span v-else-if="replyToMessage.message_type === 'image'">📷 Image</span>
+                        <span v-else-if="replyToMessage.message_type === 'video'">🎬 Video</span>
+                        <span v-else-if="replyToMessage.message_type === 'document'">📎 Document</span>
+                        <span v-else-if="replyToMessage.message_type === 'interactivelist'">{{replyToMessage.message.interactive.header.text}}</span>
+                        <span v-else-if="replyToMessage.message_type === 'auto_reply_with_buttons'">{{replyToMessage.message.interactive.body.text}}</span>
+                        <span v-else-if="replyToMessage.message_type === 'template_message'">{{ replyToMessage.message.replace(/^(api|normal|limited_time_offer|utility):\s*/i, '') }}</span>
+                        <span v-else-if="replyToMessage.message_type === 'reply_button_text'">{{replyToMessage.message}}</span>
+                        <span v-else-if="replyToMessage.message_type === 'reply_button_url'">{{replyToMessage.message.interactive.header.text}}</span>
+                        <span v-else-if="replyToMessage.message_type === 'reply_button_media'">{{replyToMessage.message}}</span>
+                        <span v-else-if="replyToMessage.message_type === 'reply_button_document'">{{replyToMessage.message}}</span>
+                        
+                    </div>
+                </div>
+            </transition>
             <div 
                 class="drop-area" 
                 @drop="handleDrop" 
@@ -766,9 +1029,11 @@ watch(text_message, (newVal, oldVal) => {
                     <button class="btn btn-outline-default" type="button" @click="sendMessage" v-if="text_message">
                         <i class="fa fa-paper-plane text-muted"></i>
                     </button>
-                    <button class="btn btn-outline-default" type="button" @click="sendMediaMessage" v-if="Object.keys(uploaded_file).length > 0">
+                    <button class="btn btn-outline-default" type="button" @click="sendMediaMessage" v-else-if="Object.keys(uploaded_file).length > 0">
                         <i class="fa fa-paper-plane text-muted"></i>
                     </button>
+                    
+                    
                 </div>
                 <!-- Preview area -->
                 <div v-if="droppedImagePreview" class="image-preview">
@@ -798,11 +1063,52 @@ watch(text_message, (newVal, oldVal) => {
         <div class="messenger-sidebar">
             <div class="messenger-sidebar-header">
                 <h3 class="mb-0">Customer remarks</h3>
-                <div class="position-relative flex-1 ps-3">
-                    
-                </div>
             </div>
+            <card v-if="selected_customer">
+                <card-body class="pb-2">
+                    <div class="row">
+                        <div class="col-md-12">
+                            <div class="row" style="margin-bottom:10px;">
+                                <div class="flex-fill fw-bold fs-16px">Add remark for {{selected_customer.display_name}}</div>
+                            </div>
+                            <div class="row">
+                                <div class="col-md-12">
+                                    <v-select v-model="select_remark_category" :options="remark_categories" label="name" :reduce="option => option.name"></v-select>
+                                </div>
+                            </div>
 
+                            <div class="row" style="margin-top:10px;">
+                                <div class="col-md-12">
+                                    <textarea 
+                                        class="form-control" 
+                                        v-model="remark" 
+                                        rows="3" 
+                                        placeholder="add remark"
+                                    ></textarea>            
+                                </div>
+                            </div>
+                            <div class="row" style="margin-top:10px;">
+                                <div class="col-md-6">
+                                    <button type="button" class="btn btn-teal me-2" @click="createRemark">Create</button>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </card-body>
+                <div class="list-group list-group-flush" v-for="remark in customer_remarks">
+					<!-- BEGIN list-group-item -->
+					<a href="#" class="list-group-item list-group-item-action d-flex ps-3">
+						<div class="flex-fill">
+							<div class="fw-500 text-body">{{ remark.remark}}</div>
+							<div class="mb-2 fs-13px">{{remark.category_name }} by {{remark.by_admin }}</div>
+							<div class="mb-1">
+								<span class="badge bg-pink text-white rounded-sm fs-12px fw-500">{{ remarkFormatDate(remark.created_at) }}</span>
+							</div>
+						</div>
+					</a>
+					<!-- END list-group-item -->
+				</div>
+            </card>
         </div>
     </div>
 </template>

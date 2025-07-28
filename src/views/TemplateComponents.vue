@@ -129,6 +129,7 @@ async function uploadFile(event) {
 
 
 async function preview(){
+  spin_loading.value = true
   if(recipient.value){
     let payload = {}
     payload['waba_id'] = props.waba_id
@@ -176,6 +177,7 @@ async function preview(){
     let notification_message = "No Recipient"
     emit('showtoast',notification_message)
   }
+  spin_loading.value = false
 }
 
 async function sendMultiple(){
@@ -1193,7 +1195,6 @@ updateBodyVariables()
                     v-model="schedule_time" 
                     :min-date="minDate"
                     :disabled-dates="disableDates"
-                    @update:model-value="validateTime"
                   />
                 </div>
               </div>

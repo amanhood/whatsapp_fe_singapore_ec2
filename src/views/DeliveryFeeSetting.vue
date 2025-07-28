@@ -11,6 +11,7 @@ import moment from 'moment';
 const router = useRouter()
 let username = ref(null)
 let token = ref(null)
+let role = ref(null)
 let notification_message = ref(null)
 let delivery_fee_options = [
   {value:'free_delivery',label:'Free Delivery'},
@@ -43,11 +44,16 @@ let selected_fee_id = ref(null)
 
 token = sessionStorage.getItem("token")
 username = sessionStorage.getItem("username")
+role.value = sessionStorage.getItem("role")
 
 
 function checkLogin(){
   if(!token){
     router.push('/page/login');
+  } else {
+    if (role.value != 'parent'){
+        router.push('/page/login');
+    } 
   }
 }
 

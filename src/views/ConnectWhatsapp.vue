@@ -7,6 +7,7 @@ const router = useRouter()
 
 let username = ref(null)
 let token = ref(null)
+let role = ref(null)
 let fb_login_error_message = ref(null)
 let notification_message = ref(null)
 //token = userSession.token
@@ -14,12 +15,11 @@ let notification_message = ref(null)
 //console.log(userSession.token)
 token = sessionStorage.getItem("token")
 username = sessionStorage.getItem("username")
+role.value = sessionStorage.getItem("role")
 let whatsapp_accounts = ref([])
 let fbcode = ref(null)
 let phone_number = ref(null)
 let waba = ref(null)
-let role = ref(null)
-role = sessionStorage.getItem("role")
 
 async function generateClientAccessToken(fbcode,waba,phone_number,token){
   let payload = {}
@@ -40,6 +40,10 @@ async function checkWaba(){
 function checkLogin(){
   if(!token){
     router.push('/page/login');
+  } else {
+    if(role.value == 'child'){
+        router.push('/page/login');
+    }
   }
 }
 

@@ -12,6 +12,7 @@ let templates = ref([])
 let fixed_templates = ref([])
 let username = ref(null)
 let token = ref(null)
+let role = ref(null)
 let fb_login_error_message = ref(null)
 let selected_category = ref(null)
 let selected_language = ref(null)
@@ -35,6 +36,8 @@ let selected_phone_number_id = ref(null)
 //console.log(userSession.token)
 token = sessionStorage.getItem("token")
 username = sessionStorage.getItem("username")
+role.value = sessionStorage.getItem("role")
+
 
 async function checkWaba(){
   let data = await postRequest("check_waba",null,token)
@@ -134,6 +137,10 @@ function messaging(template,selected_waba_account,selected_phone_number_id){
 function checkLogin(){
   if(!token){
     router.push('/page/login');
+  } else {
+    if (role.value != 'parent'){
+        router.push('/page/login');
+    } 
   }
 }
 

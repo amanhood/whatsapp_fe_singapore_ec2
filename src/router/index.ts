@@ -3,6 +3,7 @@ import { createRouter, createWebHistory } from "vue-router";
 const router = createRouter({
   history: createWebHistory(import.meta.env.BASE_URL),
   routes: [
+	{ path: '/page/remark-categories', component: () => import('../views/RemarkCategories.vue') },
 	{ path: '/page/check-messages', component: () => import('../views/CheckMessages.vue') },
 	{ path: '/page/sub-accounts', component: () => import('../views/SubAccounts.vue') },
 	{ path: '/page/client_choice_records', component: () => import('../views/ClientChoiceRecords.vue') },

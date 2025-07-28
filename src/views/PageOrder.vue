@@ -12,11 +12,13 @@ const router = useRouter()
 
 let username = ref(null)
 let token = ref(null)
+let role = ref(null)
 let carts = ref([])
 let cart_items = ref([])
 let notification_message = ref(null)
 token = sessionStorage.getItem("token")
 username = sessionStorage.getItem("username")
+role.value = sessionStorage.getItem("role")
 let selected_status = ref(null)
 let status = [
         { id:false,title: "Pending" },
@@ -28,6 +30,10 @@ let search_term = ref(null)
 function checkLogin(){
   if(!token){
     router.push('/page/login');
+  } else {
+    if (role.value != 'parent'){
+        router.push('/page/login');
+    } 
   }
 }
 

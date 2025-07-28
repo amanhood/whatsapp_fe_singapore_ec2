@@ -11,6 +11,7 @@ const router = useRouter()
 
 let username = ref(null)
 let token = ref(null)
+let role = ref(null)
 let whatsapp_accounts = ref([])
 let select_account = ref(null)
 let selected_waba_account = ref(null)
@@ -83,10 +84,15 @@ let delete_catalog = ref(null)
 
 token = sessionStorage.getItem("token")
 username = sessionStorage.getItem("username")
+role.value = sessionStorage.getItem("role")
 
 function checkLogin(){
   if(!token){
     router.push('/page/login');
+  } else {
+    if (role.value != 'parent'){
+        router.push('/page/login');
+    } 
   }
 }
 

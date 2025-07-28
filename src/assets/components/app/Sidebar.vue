@@ -32,8 +32,9 @@ const fullMenu = [
     { url: '/page/connect_whatsapp', icon: 'fa fa-cog', text: 'Connect whatsapp' },
     { url: '/page/connect-business-account', icon: 'fa fa-cog', text: 'Connect business' },
     { is_divider: true },
-    { text: 'Messages', is_header: true },
-    { url: '/page/check-messages', icon: 'fa fa-cog', text: 'Check messages' },
+    { text: 'Customer Messages', is_header: true },
+    { url: '/page/check-messages', icon: 'fa fa-cog', text: 'Messages' },
+    { url: '/page/remark-categories', icon: 'fa fa-cog', text: 'Remark categories' },
     { is_divider: true },
     { text: 'Marketing Message', is_header: true },
     { url: '/page/marketing_templates', icon: 'fa fa-cog', text: 'Manage templates' },
@@ -54,7 +55,7 @@ const menuItems = ref([])
 const updateMenuByRole = (role: string | null) => {
   if (role === 'child') {
     menuItems.value = fullMenu.filter(
-      (item) => item.text === 'Messages' || item.url === '/page/check-messages'
+      (item) => item.text === 'Message' || item.url === '/page/check-messages'
     )
   } else {
     menuItems.value = fullMenu
