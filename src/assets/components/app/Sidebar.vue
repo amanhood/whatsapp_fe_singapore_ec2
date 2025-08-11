@@ -38,6 +38,7 @@ const fullMenu = [
     { is_divider: true },
     { text: 'Marketing Message', is_header: true },
     { url: '/page/marketing_templates', icon: 'fa fa-cog', text: 'Manage templates' },
+    { url: '/page/landing-pages', icon: 'fa fa-cog', text: 'Manage landing page' },
     { url: '/page/send_message_records', icon: 'fa fa-cog', text: 'Sent message records' },
     { url: '/page/client_choice_records', icon: 'fa fa-cog', text: 'Client choice records' },
     { is_divider: true },

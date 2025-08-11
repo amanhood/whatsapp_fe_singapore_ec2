@@ -256,8 +256,9 @@ async function sendMultiple(){
               if (Array.isArray(button.example) && button.example.length > 0) {
                 // check any url variable at excel
                 let link_variables = []
-                if (typeof data.url === 'string' && data.url.trim() !== ''){
-                  link_variables.push(data.url)
+                const data_url = String(data.url);
+                if (data_url.trim() !== ''){
+                  link_variables.push(data_url)
                   message['url_variables'] = link_variables
                 } else {
                   // if no header text existed at excel , use header_text input from web
@@ -329,6 +330,7 @@ async function sendMultiple(){
       message_data.push(message);
     }
     payload.message_data = message_data;
+    console.log(payload.message_data)
     payload['schedule_time'] = convertYMDHMS(schedule_time.value)
     payload['token'] = token
     await send_to_background_task(payload, token);

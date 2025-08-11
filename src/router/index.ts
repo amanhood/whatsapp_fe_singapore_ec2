@@ -3,6 +3,14 @@ import { createRouter, createWebHistory } from "vue-router";
 const router = createRouter({
   history: createWebHistory(import.meta.env.BASE_URL),
   routes: [
+	{ path: '/page/thank-you', component: () => import('../views/ThankYou.vue') },
+	{ path: '/page/landing-pages', component: () => import('../views/LandingPages.vue') },
+	{ path: '/page/create-landing-page', component: () => import('../views/CreateOrEditLandingPage.vue'),props: { isEdit: false } },
+	{ path: '/page/edit-landing-page/:id', component: () => import('../views/CreateOrEditLandingPage.vue'),props: route => ({
+		isEdit: true,
+		landingPageId: route.params.id
+	  }) },
+	{ path: '/page/landing-page/:user/:id', component: () => import('../views/LandingPage.vue') },
 	{ path: '/page/remark-categories', component: () => import('../views/RemarkCategories.vue') },
 	{ path: '/page/check-messages', component: () => import('../views/CheckMessages.vue') },
 	{ path: '/page/sub-accounts', component: () => import('../views/SubAccounts.vue') },
