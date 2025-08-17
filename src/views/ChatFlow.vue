@@ -23,6 +23,7 @@ const state = window.history.state
 let token = ref(null)
 let username = ref(null)
 let role = ref(null)
+let user_id = ref(null)
 let selected_waba_account = ref(state.waba_id)
 let selected_phone_number_id = ref(state.phone_number_id)
 let selected_phone_number = ref(state.phone_number)
@@ -32,10 +33,13 @@ let isLoading = ref(false)
 token = sessionStorage.getItem("token")
 username = sessionStorage.getItem("username")
 role.value = sessionStorage.getItem("role")
+user_id.value = sessionStorage.getItem("id")
 let is_interactive_list_existed = ref(false)
 let is_autoreplymessage_existed = ref(false)
 let selected_node = ref(null)
 let selected_interactivelist = ref(null)
+let landing_pages = ref([])
+let selected_landing_page = ref(null)
 
 function checkLogin(){
   if(!token){
@@ -58,7 +62,30 @@ onMounted(() => {
     // generating nodes and messages with edges
     generateStoryBoard()
   }
+  getLandingPages()
 });
+
+async function getLandingPages(){
+    let response = await getRequest("get_landing_pages",token)
+    if(response.request.status == 200){
+        landing_pages.value = response['data']['landing_pages']
+    } else {
+        let notification_message = "System error"
+        showToast(notification_message)
+    }
+}
+
+function selectLandingPage(button){
+    console.log(button)
+    let title = getSlug(selected_landing_page.value)
+    let url = "https://app.biz-api.com/page/landing-page/" + user_id.value + "/" + title
+    button.url = url
+}
+
+function getSlug(title) {
+  console.log(title)
+  return title.replace(/\s+/g, '-');
+}
 
 function generateStoryBoard(){
   if(existing_message.value){
@@ -1227,11 +1254,18 @@ checkLogin()
                   </fragment>
 
                   <fragment v-if="button.button_type =='url'">
+
                     <div class="form-group mb-3">
                       <label class="form-label" for="exampleFormControlSelect1" style="font-weight:normal;">
                         <button type="button" class="btn btn-pink">{{getType(button.button_type)}}</button>
                       </label>
                     </div>
+
+                    <div class="form-group mb-3" v-if="landing_pages.length > 0">
+                      <label class="form-label" for="exampleFormControlSelect1" style="font-weight:normal;">Select Landing Page</label>
+                      <v-select v-model="selected_landing_page" :options="landing_pages" label="title" :reduce="loc => loc.title" @update:modelValue="selectLandingPage(button)"></v-select>
+                    </div>
+
                     <div class="form-group mb-3">
                       <label class="form-label" for="exampleFormControlSelect1" style="font-weight:normal;">Header</label>
                       <input type="text" class="form-control" placeholder="" v-model="button.url_header_text"/>
@@ -1438,11 +1472,18 @@ checkLogin()
                 </fragment>
 
                 <fragment v-if="button.button_type =='url'">
+                  
                   <div class="form-group mb-3">
                     <label class="form-label" for="exampleFormControlSelect1" style="font-weight:normal;">
                       <button type="button" class="btn btn-pink">{{getType(button.button_type)}}</button>
                     </label>
                   </div>
+
+                  <div class="form-group mb-3" v-if="landing_pages.length > 0">
+                    <label class="form-label" for="exampleFormControlSelect1" style="font-weight:normal;">Select Landing Page</label>
+                    <v-select v-model="selected_landing_page" :options="landing_pages" label="title" :reduce="loc => loc.title" @update:modelValue="selectLandingPage(button)"></v-select>
+                  </div>
+
                   <div class="form-group mb-3">
                     <label class="form-label" for="exampleFormControlSelect1" style="font-weight:normal;">Header</label>
                     <input type="text" class="form-control" placeholder="" v-model="button.url_header_text"/>

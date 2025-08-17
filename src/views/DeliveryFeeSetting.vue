@@ -1,6 +1,6 @@
 <script setup>
 import { useUserSessionStore } from '@/stores/user-session';
-import { ref } from 'vue'
+import { ref,onMounted } from 'vue'
 import { getRequest,postRequest,deleteRequest } from '../composables/api.js'
 import { Toast } from 'bootstrap';
 import { useRouter, RouterLink } from 'vue-router';
@@ -41,6 +41,9 @@ let country = ref(null)
 let status = ref(null)
 let delivery_fees = ref([])
 let selected_fee_id = ref(null)
+let whatsapp_accounts = ref([])
+let is_catalog = ref(false)
+
 
 token = sessionStorage.getItem("token")
 username = sessionStorage.getItem("username")
@@ -56,6 +59,54 @@ function checkLogin(){
     } 
   }
 }
+
+async function checkWaba(){
+  let data = await postRequest("check_waba",null,token)
+  whatsapp_accounts.value = data['data']['whatsapp_accounts']
+  data['data']['whatsapp_accounts'].forEach(element => {
+    let waba_id = element['waba_id']
+    let phone_number_id = element['phone_number_id']
+    getPermissions(phone_number_id,waba_id)
+  });
+}
+
+async function getPermissions(phone_number_id,waba_id,){
+  let payload = {}
+  payload['waba_id'] = waba_id
+  payload['phone_number_id'] = phone_number_id
+  let response = await postRequest("get_fb_permissions",payload,token)
+  if(response.request.status == 200){
+    const acc = whatsapp_accounts.value.find(wa => wa.waba_id === waba_id)
+    if (acc){
+      acc['permissions'] = JSON.parse(response['data']['permissions'])
+      acc.is_catalog = hasCatalogManagement(acc)
+      console.log(acc)
+      if(acc.is_catalog == true){
+        is_catalog.value = true
+      }
+    }
+  } else {
+    notification_message.value = "Failed to get permissions"
+    showToast(notification_message.value)
+  }
+}
+
+function normalizePermissions(perms) {
+  if (!perms) return { data: [] };
+  if (typeof perms === "string") {
+    try { return JSON.parse(perms); } catch { return { data: [] }; }
+  }
+  return perms; // already an object
+}
+
+function hasCatalogManagement(acc) {
+  if (!acc) return false;
+  const perms = normalizePermissions(acc.permissions);
+  return perms.data.some(
+    p => p.permission === "catalog_management" && p.status === "granted"
+  );
+}
+
 
 function showToast(message) {
   //event.preventDefault();
@@ -209,10 +260,18 @@ async function deleteFee(fee_id){
     }
 }
 
+function go_ecommerce(){
+  router.push({
+      path: '/page/whatsapp-ecommerce'
+  });
+}
 
-
-checkLogin()
-getDeliveryFee()
+onMounted(()=> {
+    checkLogin()
+    checkWaba()
+    hasCatalogManagement() 
+    getDeliveryFee()
+})
 
 </script>
 
@@ -299,51 +358,61 @@ getDeliveryFee()
     </div>
 
 	<card>
-		<div class="tab-content p-4" >
-			<div class="tab-pane fade show active" id="allTab">
-				<div class="row">
-                    <div class="col-xl-2">
-                        <div class="mb-3">
-                            <button type="button" class="btn btn-teal mb-1 me-1" data-bs-toggle="modal" data-bs-target="#modalLg1" @click="clearExistingFeeData">Create</button>
+        <card-body class="pb-2" v-if="is_catalog == true">
+            <div class="tab-content p-4">
+                <div class="tab-pane fade show active" id="allTab">
+                    <div class="row">
+                        <div class="col-xl-2">
+                            <div class="mb-3">
+                                <button type="button" class="btn btn-teal mb-1 me-1" data-bs-toggle="modal" data-bs-target="#modalLg1" @click="clearExistingFeeData">Create</button>
+                            </div>
                         </div>
                     </div>
-                </div>
 
-				<!-- BEGIN table -->
-				<div class="table-responsive">
-					<table class="table table-hover text-nowrap">
-						<thead>
-							<tr>
-								<th class="border-top-0 pt-0 pb-2">Type</th>
-								<th class="border-top-0 pt-0 pb-2">Free delivery threshold</th>
-								<th class="border-top-0 pt-0 pb-2">Fee per order</th>
-                                <th class="border-top-0 pt-0 pb-2">Currency</th>
-                                <th class="border-top-0 pt-0 pb-2">Country</th>
-                                <th class="border-top-0 pt-0 pb-2">Created</th>
-                                <th class="border-top-0 pt-0 pb-2">Status</th>
-                                <th class="border-top-0 pt-0 pb-2">Edit</th>
-                                <th class="border-top-0 pt-0 pb-2">Delete</th>
-							</tr>
-						</thead>
-						<tbody>
-							<tr v-for="fee in delivery_fees">         
-                                <td class="align-middle">{{displayDeliveryFeeType(fee.fee_type)}}</td>
-                                <td class="align-middle">{{fee.free_delivery_limit}}</td>
-                                <td class="align-middle">{{fee.fee_per_order}}</td>
-                                <td class="align-middle">{{fee.currency}}</td>
-                                <td class="align-middle">{{fee.country_name}}</td>  
-                                <td class="align-middle">{{convertDateTime(fee.created_at)}}</td>
-                                <td class="align-middle">{{fee.status}}</td>   
-                                <td class="align-middle"><button type="button" class="btn btn-warning me-2" data-bs-toggle="modal" data-bs-target="#modalLg1" @click="selectFee(fee)">Edit</button></td>
-                                <td class="align-middle"><button type="button" class="btn btn-danger me-2" @click="deleteFee(fee.id)">Delete</button></td> 
-                            </tr>
-						</tbody>
-					</table>
-				</div>
-				<!-- END table -->
-			</div>
-		</div>
+                    <!-- BEGIN table -->
+                    <div class="table-responsive">
+                        <table class="table table-hover text-nowrap">
+                            <thead>
+                                <tr>
+                                    <th class="border-top-0 pt-0 pb-2">Type</th>
+                                    <th class="border-top-0 pt-0 pb-2">Free delivery threshold</th>
+                                    <th class="border-top-0 pt-0 pb-2">Fee per order</th>
+                                    <th class="border-top-0 pt-0 pb-2">Currency</th>
+                                    <th class="border-top-0 pt-0 pb-2">Country</th>
+                                    <th class="border-top-0 pt-0 pb-2">Created</th>
+                                    <th class="border-top-0 pt-0 pb-2">Status</th>
+                                    <th class="border-top-0 pt-0 pb-2">Edit</th>
+                                    <th class="border-top-0 pt-0 pb-2">Delete</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                <tr v-for="fee in delivery_fees">         
+                                    <td class="align-middle">{{displayDeliveryFeeType(fee.fee_type)}}</td>
+                                    <td class="align-middle">{{fee.free_delivery_limit}}</td>
+                                    <td class="align-middle">{{fee.fee_per_order}}</td>
+                                    <td class="align-middle">{{fee.currency}}</td>
+                                    <td class="align-middle">{{fee.country_name}}</td>  
+                                    <td class="align-middle">{{convertDateTime(fee.created_at)}}</td>
+                                    <td class="align-middle">{{fee.status}}</td>   
+                                    <td class="align-middle"><button type="button" class="btn btn-warning me-2" data-bs-toggle="modal" data-bs-target="#modalLg1" @click="selectFee(fee)">Edit</button></td>
+                                    <td class="align-middle"><button type="button" class="btn btn-danger me-2" @click="deleteFee(fee.id)">Delete</button></td> 
+                                </tr>
+                            </tbody>
+                        </table>
+                    </div>
+                    <!-- END table -->
+                </div>
+            </div>
+        </card-body>
+		
+        <card-body class="pb-2" v-else>
+            <div class="alert alert-warning">
+                <strong>Ohh, Not yet authorize the whatsapp ecommerce permission to us</strong> <br><br>
+                <a href="#" class="btn btn-yellow" @click="go_ecommerce">Go ecommerce</a>
+            </div>
+        </card-body>
 	</card>
+    
 
 
 </template>

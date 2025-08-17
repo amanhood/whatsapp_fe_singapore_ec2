@@ -115,7 +115,7 @@ function selectButton(){
     if(buttons.value.length < 3){
       if(selected_button_type.value.id == "quick_reply"){
         custom_button_shown.value = true
-        buttons.value.push({'id':button_id.value,'type':selected_button_type.value.id,text:''})
+        buttons.value.push({'id':button_id.value,'type':selected_button_type.value.id,text:'',api_call:''})
       } 
       button_id.value += 1
     } else {
@@ -235,8 +235,9 @@ function submit(){
         if(buttons.value.length > 0){
           let buttons_components = []
           buttons.value.forEach((item) => {
+            console.log(item)
             if(item.type=='quick_reply'){
-              buttons_components.push({"type": "QUICK_REPLY","text": item.text})
+              buttons_components.push({"type": "QUICK_REPLY","text": item.text,"api_call":item.api_call})
             } 
           })
           data['component'].push({
@@ -265,9 +266,10 @@ async function submitForm(payload){
     }
   } else {
     spin_loading.value = false
+    let notification_message = "Failed to create choice template"
+    emit('showtoast',notification_message)
   }
 }
-
 
 </script>
 
@@ -385,6 +387,9 @@ async function submitForm(payload){
           <template v-if="button.type == 'quick_reply'">
             <div class="col-md-3">
               <input type="text" class="form-control" placeholder="custom button text" v-model="button.text"/>
+            </div>
+             <div class="col-md-3">
+              <input type="text" class="form-control" placeholder="action after clicked button" v-model="button.api_call"/>
             </div>
             <div class="col-md-3">
               <button type="button" class="btn btn-danger mb-1 me-1" @click="deleteButton(button.id)">delete</button>

@@ -119,10 +119,10 @@ onMounted(() => {
 						</thead>
 						<tbody>
 							<tr v-for="landing_page in landing_pages">         
-                                <td class="align-middle">{{landing_page.title }}</td>
-                                <td class="align-middle"><button type="button" class="btn btn-yellow mb-1 me-1" @click="showLandingPage(user_id, getSlug(landing_page.title))">Show</button></td>
-                                <td class="align-middle"><button type="button" class="btn btn-warning mb-1 me-1" @click="editLandingPage(landing_page.id)">Edit</button></td>
-                            </tr>
+                  <td class="align-middle">{{landing_page.title }}</td>
+                  <td class="align-middle"><button type="button" class="btn btn-yellow mb-1 me-1" @click="showLandingPage(user_id, getSlug(landing_page.title))">Show</button></td>
+                  <td class="align-middle"><button type="button" class="btn btn-warning mb-1 me-1" @click="editLandingPage(landing_page.id)">Edit</button></td>
+              </tr>
 						</tbody>
 					</table>
 				</div>

@@ -81,6 +81,9 @@ let edit_url_index = ref(1)
 let selected_product = ref(null)
 let error_message = ref(null)
 let delete_catalog = ref(null)
+let permissions = ref([])
+let is_catalog = ref(false)
+let fbcode = ref(null)
 
 token = sessionStorage.getItem("token")
 username = sessionStorage.getItem("username")
@@ -114,19 +117,14 @@ async function get_business_account(phone_number){
 			let message = data['data']['error']['message']
 			showToast(message)
 		} else {
-      if(data['data']['catalogs']['error']){
-        let message = data['data']['catalogs']['error']['message']
-				showToast(message)
-			} else {
-        if(data['data']['business_account_id']){
-  				business_account_id.value = data['data']['business_account_id']
-          //console.log(business_account_id.value)
-          catalogs.value = data['data']['catalogs']['data']
-          if(catalogs.value.length > 0){
-            catalog_link.value = "https://wa.me/c/" + phone_number.replace(/[ +]/g, "")
-          }
-  			}
-			}
+      if(data['data']['business_account_id']){
+        business_account_id.value = data['data']['business_account_id']
+        //console.log(business_account_id.value)
+        catalogs.value = data['data']['catalogs']['data']
+        if(catalogs.value.length > 0){
+          catalog_link.value = "https://wa.me/c/" + phone_number.replace(/[ +]/g, "")
+        }
+      }
 		}
   }
 }
@@ -135,8 +133,35 @@ function selectAccount(){
   selected_phone_number_id.value = select_account.value.id
   selected_waba_account.value = select_account.value.waba
   selected_phone_number.value = select_account.value.value
-  get_business_account(selected_phone_number.value)
-  whatsapp_commerce_setting()
+  getPermissions(selected_phone_number_id.value,selected_waba_account.value)
+}
+
+async function getPermissions(phone_number_id,waba_id){
+  let payload = {}
+  payload['waba_id'] = waba_id
+  payload['phone_number_id'] = phone_number_id
+  let response = await postRequest("get_fb_permissions",payload,token)
+  if(response.request.status == 200){
+    permissions.value = JSON.parse(response['data']['permissions'])
+    is_catalog.value = hasCatalogManagement(permissions.value)
+    console.log(is_catalog.value)
+    if(is_catalog.value == true){
+      get_business_account(selected_phone_number.value)
+      whatsapp_commerce_setting()
+    } else {
+      notification_message.value = "No ecommerce permission, please authorise whatapp ecommerce permission to us"
+      showToast(notification_message.value)
+    }
+  } else {
+    notification_message.value = "Failed to create choice template"
+    showToast(notification_message.value)
+  }
+}
+
+function hasCatalogManagement(permissions) {
+  return permissions.data.some(
+    p => p.permission === "catalog_management" && p.status === "granted"
+  )
 }
 
 function showToast(response_message) {
@@ -379,6 +404,7 @@ async function uploadFile(){
 
 }
 
+
 async function whatsapp_commerce_setting(){
   let payload = {}
   payload['waba_id'] = selected_waba_account.value
@@ -389,9 +415,10 @@ async function whatsapp_commerce_setting(){
 			let message = data['data']['error']['message']
 			showToast(message)
 		} else {
-      console.log(data)
-      is_cart_enabled.value = data['data']['data'][0]['is_cart_enabled']
-      is_catalog_visible.value = data['data']['data'][0]['is_catalog_visible']
+      if(data['data']['data'].length > 0){
+        is_cart_enabled.value = data['data']['data'][0]['is_cart_enabled']
+        is_catalog_visible.value = data['data']['data'][0]['is_catalog_visible']
+      }
 		}
   }
 }
@@ -483,6 +510,87 @@ function closeCatalogModal() {
   const closeButton = document.getElementById("deleteCatalogModal");
   closeButton.click()
 }
+
+async function generateClientAccessToken(fbcode,waba,phone_number,token){
+  let payload = {}
+  payload['code'] = fbcode
+  payload['phone_number_id'] = phone_number
+  payload['waba_id'] = waba
+  let data = await postRequest("generate_fb_client_access_token",payload,token)
+  if(data.request.status == 200){
+    checkWaba()
+    getPermissions(phone_number,selected_waba_account.value)
+  }
+}
+
+window.fbAsyncInit = ()=> {
+  window.FB.init({
+    appId: "1060499497949619", //You will need to change this
+    cookie: true, // This is important, it's not enabled by default
+    xfbml: true,
+    version: "v17.0"
+  });
+};
+
+(function (d, s, id) {
+    var js, fjs = d.getElementsByTagName(s)[0];
+    if (d.getElementById(id)) return;
+    js = d.createElement(s); js.id = id;
+    js.src = "https://connect.facebook.net/en_US/sdk.js";
+    fjs.parentNode.insertBefore(js, fjs);
+  }(document, 'script', 'facebook-jssdk'));
+
+
+function logInWithFacebook() {
+  FB.login((response)=>
+    {
+      if (response.authResponse) {
+        const accessToken = response.authResponse.accessToken;
+        var code = response.authResponse.code
+        fbcode.value = code
+        generateClientAccessToken(fbcode.value,selected_waba_account.value,selected_phone_number_id.value,token)
+        // The returned code must be transmitted to your backend,
+        // which will perform a server-to-server call from there to our servers for an access token
+      } else {
+        fb_login_error_message = 'User cancelled login or did not fully authorize.'
+      }
+    },
+    {
+      "config_id": 1058568108496704, // configuration ID goes here
+      "response_type": "code",    // must be set to 'code' for System User access token
+      "override_default_response_type": true, // when true, any response types passed in the "response_type" will take precedence over the default types
+      "scope":"catalog_management",
+      "extras": {
+        "sessionInfoVersion": 2,  //  Receive Session Logging Info
+      }
+    }
+  )
+}
+
+const sessionInfoListener = (event) => {
+  if (event.origin !== "https://www.facebook.com") return;
+  try {
+    const data = JSON.parse(event.data);
+    if (data.type === 'WA_EMBEDDED_SIGNUP') {
+      // if user finishes the Embedded Signup flow
+      if (data.event === 'FINISH') {
+        const {phone_number_id, waba_id} = data.data;
+        phone_number.value = phone_number_id
+        waba.value = waba_id
+      }
+      // if user cancels the Embedded Signup flow
+      else {
+       const{current_step} = data.data;
+      }
+    }
+  } catch {
+    // Don’t parse info that’s not a JSON
+    console.log('Non JSON Response', event.data);
+  }
+};
+
+
+window.addEventListener('message', sessionInfoListener);
 
 
 checkLogin()
@@ -682,7 +790,7 @@ checkWaba()
               <v-select v-model="select_account" :options="whatsapp_accounts" label="value" @update:modelValue="selectAccount"></v-select>
             </div>
           </div>
-          <div class="row" id="marin_top_10" v-if="select_account">
+          <div class="row" id="marin_top_10" v-if="select_account && is_catalog == true">
             <div class="col-md-6">
               <button type="button" class="btn btn-yellow me-2" data-bs-toggle="modal" data-bs-target="#modalLg">Cart setting</button>
             </div>
@@ -692,7 +800,7 @@ checkWaba()
     </card-body>
       
     <div class="row">
-      <div class="col-md-3" v-if="select_account">
+      <div class="col-md-3" v-if="select_account && is_catalog == true && business_account_id">
         <card-body class="pb-2" style="border-bottom:1px solid #ccc;border-right:1px solid #ccc;">
           <div class="row" style="margin-bottom:10px;">
             <div class="flex-fill fw-bold fs-16px">Catalog</div>
@@ -707,7 +815,7 @@ checkWaba()
           </div>
         </card-body>
         
-        <fragment v-for="catalog in catalogs" v-if="catalogs.length > 0">
+        <fragment v-for="catalog in catalogs" v-if="catalogs.length > 0 && business_account_id && is_catalog == true">
           <card-body class="pb-2" style="border-bottom:1px solid #ccc;border-right:1px solid #ccc;">
             <div class="row" style="margin-bottom:10px;">
                 <div class="col-md-12" style="margin-top:10px;">
@@ -878,9 +986,16 @@ checkWaba()
 
    
      
-    <card-body class="pb-2" v-if="select_account && !business_account_id">
+    <card-body class="pb-2" v-if="select_account && is_catalog == true &&  !business_account_id">
       <div class="alert alert-warning">
         <strong>Ohh, No business account!</strong> <a href="#" @click="go">Please connect your business account id</a>
+      </div>
+    </card-body>
+
+    <card-body class="pb-2" v-if="select_account && is_catalog == false">
+      <div class="alert alert-warning">
+        <strong>Ohh, Not yet authorize the whatsapp ecommerce permission to us</strong> <br><br>
+        <a href="#" class="btn btn-theme" id="fb_login" @click="logInWithFacebook()"><i class="fa fa-plus-circle fa-fw me-1"></i>Authorize Whatsapp Ecommerce</a>
       </div>
     </card-body>
   </card>

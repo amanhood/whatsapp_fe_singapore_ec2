@@ -21,6 +21,7 @@ let fbcode = ref(null)
 let phone_number = ref(null)
 let waba = ref(null)
 
+
 async function generateClientAccessToken(fbcode,waba,phone_number,token){
   let payload = {}
   payload['code'] = fbcode
@@ -32,9 +33,22 @@ async function generateClientAccessToken(fbcode,waba,phone_number,token){
   }
 }
 
+function showToast(message) {
+  //event.preventDefault();
+  var toast = new Toast(document.getElementById('toast-1'));
+  notification_message.value = message
+  toast.show();
+}
+
 async function checkWaba(){
   let data = await postRequest("check_waba",null,token)
   whatsapp_accounts.value = data['data']['whatsapp_accounts']
+  console.log(whatsapp_accounts.value)
+  data['data']['whatsapp_accounts'].forEach(element => {
+    let waba_id = element['waba_id']
+    let phone_number_id = element['phone_number_id']
+    let permissions = getPermissions(phone_number_id,waba_id)
+  });
 }
 
 function checkLogin(){
@@ -43,19 +57,54 @@ function checkLogin(){
   } else {
     if(role.value == 'child'){
         router.push('/page/login');
-    }
+    } 
   }
 }
 
+async function getPermissions(phone_number_id,waba_id,){
+  let payload = {}
+  payload['waba_id'] = waba_id
+  payload['phone_number_id'] = phone_number_id
+  let response = await postRequest("get_fb_permissions",payload,token)
+  if(response.request.status == 200){
+    const acc = whatsapp_accounts.value.find(wa => wa.waba_id === waba_id)
+    if (acc){
+      acc['permissions'] = JSON.parse(response['data']['permissions'])
+    }
+  } else {
+    notification_message.value = "Failed to create choice template"
+    showToast(notification_message.value)
+  }
+}
+
+function hasCatalogManagement(permissions) {
+  return !!permissions?.data?.some(
+    p => p.permission === "catalog_management" && p.status === "granted"
+  );
+}
+
+
 function go_marketing_templates(){
   router.push({
-      path: '/page/marketing_templates'
+      path: '/page/marketing-templates'
+  });
+}
+
+function go_message(){
+  router.push({
+      path: '/page/check-messages'
+  });
+}
+
+function go_landing_pages(){
+  router.push({
+      path: '/page/landing-pages'
   });
 }
 
 function go_auto_reply(){
   router.push({
-      path: '/page/auto_reply_setting'
+      path: '/page/flow-index'
   });
 }
 
@@ -140,17 +189,32 @@ const sessionInfoListener = (event) => {
   }
 };
 
+
 window.addEventListener('message', sessionInfoListener);
 
 </script>
 
 
 <template>
+  <div class="toasts-container">
+      <div class="toast fade hide" data-autohide="false" id="toast-1">
+          <div class="toast-header">
+              <i class="far fa-bell text-muted me-2"></i>
+              <strong class="me-auto">Alert</strong>
+              <small></small>
+              <button type="button" class="btn-close" data-bs-dismiss="toast"></button>
+          </div>
+          <div class="toast-body">
+              {{notification_message}}
+          </div>
+      </div>
+  </div>
 	<card>
     <card-body class="pb-2">
         <div class="row" style="margin-bottom:20px;">
           <div class="col-xl-6">
             <a href="#" class="btn btn-theme" id="fb_login" @click="logInWithFacebook()"><i class="fa fa-plus-circle fa-fw me-1"></i>Connect Whatsapp Account</a>
+             
           </div>
         </div>
         <div class="row" v-if="whatsapp_accounts.length > 0">
@@ -160,19 +224,30 @@ window.addEventListener('message', sessionInfoListener);
     						<thead>
     							<tr>
     								<th class="border-top-0 pt-0 pb-2">Whatsapp account</th>
+                    <th class="border-top-0 pt-0 pb-2">Messaging with customers</th>
                     <th class="border-top-0 pt-0 pb-2">Marketing message templates</th>
     								<th class="border-top-0 pt-0 pb-2">Auto Reply of Whatsapp Account</th>
+                    <th class="border-top-0 pt-0 pb-2">Landing Pages</th>
     								<th class="border-top-0 pt-0 pb-2">Whatsapp Ecommerce</th>
                     <th class="border-top-0 pt-0 pb-2">Check Ecommerce orders</th>
     							</tr>
     						</thead>
                 <tbody>
-    							<tr v-for="account in whatsapp_accounts">
+    							<tr v-for="account in whatsapp_accounts" v-if="whatsapp_accounts.length > 0">
     								<td class="align-middle">{{account.phone_number}}</td>
+                    <td class="align-middle"><button type="button" class="btn btn-yellow" @click="go_message">Access</button></td>
                     <td class="align-middle"><button type="button" class="btn btn-yellow" @click="go_marketing_templates">Access</button></td>
                     <td class="align-middle"><button type="button" class="btn btn-yellow" @click="go_auto_reply">Access</button></td>
-    								<td class="align-middle"><button type="button" class="btn btn-yellow" @click="go_ecommerce">Access</button></td>
-                    <td class="align-middle"><button type="button" class="btn btn-yellow" @click="go_order">Access</button></td>
+                    <td class="align-middle"><button type="button" class="btn btn-yellow" @click="go_landing_pages">Access</button></td>
+    								<template v-if="hasCatalogManagement(account.permissions)">
+                      <td class="align-middle"><button type="button" class="btn btn-yellow" @click="go_ecommerce">Access</button></td>
+                      <td class="align-middle"><button type="button" class="btn btn-yellow" @click="go_order">Access</button></td>
+                    </template>
+                    <template v-else>
+                      <td class="align-middle"><button type="button" class="btn btn-primary" @click="go_ecommerce">Grant Permission</button></td>
+                      <td class="align-middle"><button type="button" class="btn btn-primary" @click="go_ecommerce">Grant Permission</button></td>
+                    </template>
+                    
                   </tr>
                 </tbody>
               </table>

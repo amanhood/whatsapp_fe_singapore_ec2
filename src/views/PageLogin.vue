@@ -44,7 +44,7 @@ export default {
 				if(role == 'child'){
 					this.$router.push('/page/check-messages');
 				} else {
-					this.$router.push('/page/connect_whatsapp');
+					this.$router.push('/page/connect-whatsapp');
 				}
 			} else {
 				let message = "Login Failed, Your account may be blocked by some reasons"
