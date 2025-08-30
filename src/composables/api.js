@@ -1,8 +1,7 @@
 import axios from "axios";
 
-//var BASE_LOGIN_URL = "http://localhost:8002/api/"
-//var BASE_LOGIN_URL = "http://54.169.241.146:80/api/"
-var BASE_LOGIN_URL = "https://biz-api.com/api/"
+var BASE_LOGIN_URL = "http://localhost:8002/api/"
+//var BASE_LOGIN_URL = "https://biz-api.com/api/"
 
 export async function userRequest(path = null,payload){
   try {

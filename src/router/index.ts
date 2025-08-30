@@ -3,6 +3,7 @@ import { createRouter, createWebHistory } from "vue-router";
 const router = createRouter({
   history: createWebHistory(import.meta.env.BASE_URL),
   routes: [
+	{ path: '/page/submitted-flow-records', component: () => import('../views/SubmittedFlowRecords.vue') },
 	{ path: '/page/thank-you', component: () => import('../views/ThankYou.vue') },
 	{ path: '/page/landing-pages', component: () => import('../views/LandingPages.vue') },
 	{ path: '/page/create-landing-page', component: () => import('../views/CreateOrEditLandingPage.vue'),props: { isEdit: false } },
@@ -36,7 +37,7 @@ const router = createRouter({
     { path: '/page/crawler_request', component: () => import('../views/CrawlerRequest.vue') },
     { path: '/page/business_help', component: () => import('../views/BusinessHelp.vue') },
     { path: '/page/set-mpm-message', component: () => import('../views/SetMpmMessage.vue') },
-    { path: '/page/update_flow', component: () => import('../views/UpdateFlow.vue') },
+    { path: '/page/update-flow/:id', component: () => import('../views/UpdateFlow.vue') },
     { path: '/page/flows', component: () => import('../views/Flows.vue') },
     { path: '/page/product_catalogs', component: () => import('../views/ProductCatalogs.vue') },
     { path: '/page/connect-whatsapp', component: () => import('../views/ConnectWhatsapp.vue') },

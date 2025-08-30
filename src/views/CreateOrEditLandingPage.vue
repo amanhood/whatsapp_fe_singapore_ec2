@@ -291,7 +291,6 @@ onMounted(async () => {
         sections.value.forEach(updateComponentOrder)
         // bump counter so new sections get unique ids
         number_of_section.value = Math.max(0, ...sections.value.map(s => s.order_index)) + 1
-        console.log(sections.value)
     } else {
         let message = "failed to load landing page"
         showToast(message)
