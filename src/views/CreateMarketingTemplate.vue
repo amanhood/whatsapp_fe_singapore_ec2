@@ -24,7 +24,8 @@ let template_types = [
         { id:'limited_time_sale',title: "Special sales message template" },
         { id:'document_template',title: "Document message template" },
         { id:'product_catalog',title: "Products message template" },
-        { id:'choice_template',title: "Choice message template" }
+        { id:'choice_template',title: "Choice message template" },
+        { id:'flow_template',title: "Whatsapp flow message template" }
       ]
 let whatsapp_accounts = ref([])
 let selected_waba_account = ref(null)
@@ -102,5 +103,6 @@ checkWaba()
     <docs-template @showtoast="showToast" :waba_id="selected_waba_account" :phone_number_id="selected_phone_number_id" v-if="template_type && template_type.id == 'document_template'"></docs-template>
     <products-template @showtoast="showToast" :waba_id="selected_waba_account" :phone_number_id="selected_phone_number_id" v-if="template_type && template_type.id == 'product_catalog'"></products-template>
     <choice-template @showtoast="showToast" :waba_id="selected_waba_account" :phone_number_id="selected_phone_number_id" v-if="template_type && template_type.id == 'choice_template'"></choice-template>
+    <flow-template @showtoast="showToast" :waba_id="selected_waba_account" :phone_number_id="selected_phone_number_id" v-if="template_type && template_type.id == 'flow_template'"></flow-template>
   </card>
 </template>

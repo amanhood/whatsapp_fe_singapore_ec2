@@ -92,8 +92,11 @@ function checkProductTemplate(){
           template_type.value = "all_products"
         } else if (titem.type == "MPM"){
           template_type.value = "specific_products"
-        } 
+        } else if (titem.type == "FLOW"){
+          template_type.value = "whatsapp_flow"
+        }
       });
+      console.log(template.components)
     } else {
       template_type.value = "non_product"
     }
@@ -262,9 +265,14 @@ checkProductTemplate()
       <template-components :template_name="template_name" :component="template_components" :template_category="template_category" @showtoast="showToast" :waba_id="selected_waba_account" :phone_number_id="selected_phone_number_id" :template_type="template_type" :business_account_id="business_account_id" :products="products"></template-components>
     </fragment>
 
+    <fragment v-else-if="selected_waba_account && business_account_id && connected_catalog.length > 0 && template_type == 'whatsapp_flow'">
+      <template-components :template_name="template_name" :component="template_components" :template_category="template_category" @showtoast="showToast" :waba_id="selected_waba_account" :phone_number_id="selected_phone_number_id" :template_type="template_type" :business_account_id="business_account_id" :products="products"></template-components>
+    </fragment>
+
     <fragment v-if="template_category == 'UTILITY'">
       <template-components :template_name="template_name" :component="template_components" :template_category="template_category" @showtoast="showToast" :waba_id="selected_waba_account" :phone_number_id="selected_phone_number_id" :template_type="template_type" :business_account_id="business_account_id" :products="products"></template-components>
     </fragment>
+
     
     
   </card>

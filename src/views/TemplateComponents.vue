@@ -330,7 +330,7 @@ async function sendMultiple(){
       message_data.push(message);
     }
     payload.message_data = message_data;
-    console.log(payload.message_data)
+    console.log(payload)
     payload['schedule_time'] = convertYMDHMS(schedule_time.value)
     payload['token'] = token
     await send_to_background_task(payload, token);
@@ -1065,6 +1065,33 @@ updateBodyVariables()
                       <div class="row">
                         <div class="col-12" style="margin-top:10px;">
                           Phone number: {{button.phone_number}}
+                        </div>
+                      </div>
+                    </card-body>
+                  </card>
+                </div>
+              </div>
+          </div>
+          <hr style="margin-top:10px;">
+        </template>
+
+        <template v-if="button.type == 'FLOW'">
+          <div class="row">
+              <div class="row">
+                <div class="col-12">
+                  <card>
+                    <card-body style="border:1px solid #C5C5C5;">
+                      <div class="row">
+                        <div class="col-12" style="margin-top:10px;">
+                          Whatsapp flow
+                        </div>
+                      </div>
+                      <div class="row">
+                        <div class="col-12" style="margin-top:10px;">
+                          Flow name: {{button.navigate_screen}}
+                        </div>
+                        <div class="col-12" style="margin-top:10px;">
+                          Button text: {{button.text}}
                         </div>
                       </div>
                     </card-body>

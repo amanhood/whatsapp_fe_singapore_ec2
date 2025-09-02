@@ -68,14 +68,7 @@ async function getTemplates(waba_id,phone_number_id){
               if(titem.type == "MPM"){
                 item['is_mpm'] = true
                 item['can_delete'] = true
-              } else {
-                item['is_mpm'] = false
-                if(titem.type == "FLOW"){
-                  item['can_delete'] = false
-                } else {
-                  item['can_delete'] = true
-                }
-              }
+              } 
             });
           } else {
             item['is_mpm'] = false
