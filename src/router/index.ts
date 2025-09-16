@@ -18,6 +18,7 @@ const router = createRouter({
 	{ path: '/page/submitted-form-records', component: () => import('../views/SubmittedFormRecords.vue') },
 	{ path: '/page/client-choice-records', component: () => import('../views/ClientChoiceRecords.vue') },
 	{ path: '/page/send-message-records', component: () => import('../views/SentMessageRecords.vue') },
+	{ path: '/page/new-chat-flow', component: () => import('../views/NewChatFlow.vue') },
 	{ path: '/page/chat_flow', component: () => import('../views/ChatFlow.vue') },
 	{ path: '/page/flow-index', component: () => import('../views/FlowIndex.vue') },
 	{ path: '/page/order_confirmation/:id', component: () => import('../views/OrderConfirmation.vue') },

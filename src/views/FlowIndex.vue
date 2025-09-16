@@ -86,7 +86,7 @@ function showToast(response_message) {
 
 function goChatFlow(){
   router.push({
-      path: '/page/chat_flow/',
+      path: '/page/new-chat-flow/',
       state: { waba_id: selected_waba_account.value, phone_number_id: selected_phone_number_id.value, phone_number: selected_phone_number.value, action:"create" }
   });
 }
@@ -98,7 +98,7 @@ function edit(message){
 
 function editChatFlow(){
   router.push({
-      path: '/page/chat_flow/',
+      path: '/page/new-chat-flow/',
       state: { waba_id: selected_waba_account.value, phone_number_id: selected_phone_number_id.value, phone_number: selected_phone_number.value, action:"edit", message:selected_message.value}
   });
 }

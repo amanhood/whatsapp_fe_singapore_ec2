@@ -1,8 +1,8 @@
 <script setup>
-import { ref, onMounted } from "vue";
-import { VueFlow } from "@vue-flow/core";
+import { ref, onMounted, onBeforeUnmount } from "vue";
+import { useVueFlow, VueFlow,applyNodeChanges } from "@vue-flow/core";
 import { Background } from "@vue-flow/background"
-import { Controls } from "@vue-flow/controls"
+import { Controls, ControlButton } from "@vue-flow/controls"
 import { MiniMap} from "@vue-flow/minimap"
 import "@vue-flow/core/dist/style.css";
 import "material-icons/iconfont/material-icons.css";
@@ -15,6 +15,8 @@ import Loading from 'vue-loading-overlay';
 import 'vue-loading-overlay/dist/css/index.css';
 import { useRouter, RouterLink } from 'vue-router';
 import draggable from 'vuedraggable'
+import Icon from './Icon.vue'
+
 
 const router = useRouter()
 // Define reactive nodes and edges
@@ -42,6 +44,23 @@ let selected_interactivelist = ref(null)
 let landing_pages = ref([])
 let selected_landing_page = ref(null)
 
+let idleTimer = null
+const IDLE_MS = 5000
+let movementPending = false
+const { getNodes } = useVueFlow()
+const pendingIds = new Set()
+const lastPositions = new Map()
+
+const button_types = ref([
+  { type: 'text', label: 'Text' },
+  { type: 'url', label: 'Url' },
+  { type: 'next_flow', label: 'Chain' },
+  { type: 'document', label: 'Pdf' },
+  { type: 'image', label: 'Image' },
+  { type: 'video', label: 'Video' }
+])
+
+
 function checkLogin(){
   if(!token){
     router.push('/page/login');
@@ -52,19 +71,6 @@ function checkLogin(){
   }
 }
 
-
-onMounted(() => {
-  if(state.message){
-    existing_message.value = JSON.parse(state.message)
-    // assign parent id if the message from state is parent message
-    if(existing_message.value.is_parent == 'yes'){
-      parent_id.value = existing_message.value.id
-    }
-    // generating nodes and messages with edges
-    generateStoryBoard()
-  }
-  getLandingPages()
-});
 
 async function getLandingPages(){
     let response = await getRequest("get_landing_pages",token)
@@ -84,7 +90,6 @@ function selectLandingPage(button){
 }
 
 function getSlug(title) {
-  console.log(title)
   return title.replace(/\s+/g, '-');
 }
 
@@ -92,16 +97,16 @@ function generateStoryBoard(){
   if(existing_message.value){
     edges.value = []
     if (existing_message.value && typeof existing_message.value === 'object' && 'reply_type' in existing_message.value){
-      nodeWithButtons(existing_message.value.id,existing_message.value.is_parent,existing_message.value.name,existing_message.value.message,existing_message.value.buttons,1)
+      nodeWithButtons(existing_message.value,existing_message.value.id,existing_message.value.is_parent,existing_message.value.name,existing_message.value.message,existing_message.value.buttons,1)
       if(existing_message.value.is_parent == 'yes'){
         if(existing_message.value.children){
           existing_message.value.children.forEach((item, index) => {
-            nodeWithButtons(item.id,item.is_parent,item.name,item.message,item.buttons,index+2)
+            nodeWithButtons(item,item.id,item.is_parent,item.name,item.message,item.buttons,index+2)
           });
         }
         if(existing_message.value.interactivelists){
           existing_message.value.interactivelists.forEach((item,index)=>{
-            nodeWithList(item,index+3)
+            nodeWithList(item)
           })
         }
       }
@@ -120,7 +125,7 @@ function generateStoryBoard(){
       is_autoreplymessage_existed.value = true
     } else {
       // it is interactive list
-      nodeWithList(existing_message.value,3)
+      nodeWithList(existing_message.value)
       is_interactive_list_existed.value = true
     }
   }  
@@ -146,14 +151,6 @@ function generateEdgeNode(buttons){
 const nodes = ref([])
 const edges = ref([])
 
-let button_types = [
-  {value:'text',label:'Displaying text'},
-  {value:'url',label:'Go to url'},
-  {value:'next_flow',label:'Next flow'},
-  {value:'document',label:'Document'},
-  {value:'image',label:'Image'},
-  {value:'video',label:'Video'}
-]
 let key = ref(null)
 let name = ref(null)
 let is_parent = ref(null)
@@ -192,61 +189,38 @@ let startX = 100; // Starting X position
 let startY = 100;  // Starting Y position (higher than before)
 let usedPositions = new Map(); // Keep track of occupied positions
 
-function getUniquePosition(id, number, isMessageNode = false, parentId = null) {
+function getUniquePosition() {
   let x, y;
-  if (!isMessageNode) {
-    // 📌 Arrange Button Nodes in a Grid
-    let row = id % rowLimit;
-    let col = Math.floor(id / rowLimit);
-    x = startX + row * baseX;
-    y = col * number * 4;
-
-    // Ensure we store this position
-    usedPositions.set(`node-${id}`, { x, y });
-  } else {
-    // 📌 Place Message Nodes to the Right of Parent Button Nodes
-    let parentPosition = usedPositions.get(`node-${parentId}`);
-    if (!parentPosition) {
-      console.warn(`Parent ID ${parentId} not found in usedPositions!`);
-      parentPosition = { x: startX, y: startY }; // Fallback to default
-    }
-    x = parentPosition.x + number * 300; // Shift right for message node
-    y = parentPosition.y - (number * 10); // Align vertically with button node
-
-    // Prevent overlapping by checking used positions
-    let attempts = 0;
-    while (usedPositions.has(`${x}-${y}`) && attempts < 10) {
-      y += baseY; // Move down slightly if space is occupied
-      attempts++;
-    }
-
-    // Store the message node position
-    usedPositions.set(`node-${id}`, { x, y });
-  }
-
+  x = 200
+  y = 200
   return { x, y };
 }
 
+function cloneComponent(component){
+    addButton(component.type)
+}
 
-function addButton(){
-  if(buttons.value.length < 3){
-    buttons.value.push({
-      'id':button_id.value,
-      'button_type':button_type.value,
-      'title':'',
-      'button_text':'',
-      'url_header_text':'',
-      'url_body_text':'',
-      'url_footer_text':'',
-      'url_button_text':'',
-      'url':'',
-      'file':'',
-      'media_id':''
-    })
-    button_id.value += 1
-  } else {
-    let response_message = "3 buttons are maximum"
-    showToast(response_message)
+function addButton(button_type){
+  if(button_type){
+    if(buttons.value.length < 3){
+      buttons.value.push({
+        'id':button_id.value,
+        'button_type':button_type,
+        'title':'',
+        'button_text':'',
+        'url_header_text':'',
+        'url_body_text':'',
+        'url_footer_text':'',
+        'url_button_text':'',
+        'url':'',
+        'file':'',
+        'media_id':''
+      })
+      button_id.value += 1
+    } else {
+      let response_message = "3 buttons are maximum"
+      showToast(response_message)
+    }
   }
 }
 
@@ -257,11 +231,6 @@ function deleteButton(button_id){
     }
     button_type.value = null
 }
-
-//Event handlers
-// const onNodesChange = (changes) => {
-//   console.log("Nodes changed:", changes);
-// };
 
 const onEdgesChange = (changes) => {
   changes.forEach(change => {
@@ -618,6 +587,9 @@ async function createMessageWithButtons(){
     payload['parent_id'] = parent_id.value
   }
   let id = null
+  let item = null
+  payload['x_position'] = 200
+  payload['y_position'] = 200
   let response = await postRequest("create_auto_reply_message",payload,token)
   if(response['data']['status'] == "success"){
     //response_message = "created auto reply messages"
@@ -629,8 +601,9 @@ async function createMessageWithButtons(){
     if(!parent_id.value){
       parent_id.value = id
     } 
+    item = response['data']['data']
     //showToast(response_message)
-    nodeWithButtons(id,is_parent,name,message,buttons,0)
+    nodeWithButtons(item,id,is_parent,name,message,buttons,0)
     getParentNodeWithChildren
   } else {
     response_message = response['data']['data']
@@ -638,30 +611,34 @@ async function createMessageWithButtons(){
   }
 }
 
-function nodeWithButtons(id,is_parent,name,message,buttons,node_number){
-  let position = getUniquePosition(id,node_number)
+function nodeWithButtons(item,id,is_parent,name,message,buttons,node_number){
+  let position = null
+  if(item.x_position && item.y_position){
+    position = { 'x':parseFloat(item.x_position), 'y':parseFloat(item.y_position)}
+  } else {
+    position = getUniquePosition()
+  }
   let options = []
-  if(buttons.length > 0){
-    buttons.forEach((button,index) => {
-      if(button.button_type == 'url'){
-        options.push({label:button.url_button_text,id:button.id})
-        nodewithMessage(id,button,index+1)
-      } else if(button.button_type == 'text'){
-        options.push({label:button.title,id:button.id})
-        nodewithMessage(id,button,index+1)
-      } else if(button.button_type == 'next_flow'){
-        options.push({label:button.title,id:button.id})
-      } else if(button.button_type == 'document'){
-        options.push({label:button.title,id:button.id})
-        nodewithMessage(id,button,index+1)
-      } else if(button.button_type == 'image'){
-        options.push({label:button.title,id:button.id})
-        nodewithMessage(id,button,index+1)
-      } else if(button.button_type == 'video'){
-        options.push({label:button.title,id:button.id})
-        nodewithMessage(id,button,index+1)
-      }
-    });
+  if (buttons.length > 0) {
+      buttons.forEach((button, index) => {
+        const commonOption = { label: button.title || button.url_button_text, id: button.id };
+        switch (button.button_type) {
+          case "url":
+            options.push({ label: button.url_button_text, id: button.id });
+            nodewithMessage(id, button, index + 1);
+            break;
+          case "text":
+          case "document":
+          case "image":
+          case "video":
+            options.push(commonOption);
+            nodewithMessage(id, button, index + 1);
+            break;
+          case "next_flow":
+            options.push(commonOption);
+            break;
+        }
+      });
   }
   nodes.value = [
     ...nodes.value,
@@ -682,6 +659,7 @@ function nodeWithButtons(id,is_parent,name,message,buttons,node_number){
 
 
 function nodewithMessage(id,button,message_number){
+
   let parent_message_id = id
   let button_id = button.id
   let title = null
@@ -689,7 +667,7 @@ function nodewithMessage(id,button,message_number){
   let button_type = null
   let sequence = button.sequence - 1
   if(button.button_type == 'text'){
-    message = button.title
+    message = button.button_title
     button_type = "TEXT"
     edgeNodeToMessage(parent_message_id,button_id)
   } else if(button.button_type == 'url'){
@@ -716,7 +694,12 @@ function nodewithMessage(id,button,message_number){
     message = button.media_id
     edgeNodeToMessage(parent_message_id,button_id)
   }
-  let position = getUniquePosition(button_id, message_number, true, parent_message_id)
+  let position = null
+  if(button.x_position && button.y_position){
+    position = { 'x': parseFloat(button.x_position), 'y': parseFloat(button.y_position)}
+  } else {
+    position = { 'x': 200, 'y': 200}
+  }
   nodes.value = [
     ...nodes.value,
     {
@@ -731,8 +714,14 @@ function nodewithMessage(id,button,message_number){
   ];
 }
 
-function nodeWithList(item,node_number){
-  let position = getUniquePosition(item.id,node_number)
+function nodeWithList(item){
+  let position
+  if(item.x_position && item.y_position){
+      position = {'x':item.x_position,'y':item.y_position}
+  } else {
+      position = getUniquePosition()
+  }
+  
   let options = []
   if(item.sections.length > 0){
     item.sections.forEach((section,index) => {
@@ -789,11 +778,11 @@ function edgeNodeToMessage(parent_message_id,button_id){
 
 function getType(button_type){
   if(button_type=='text') {
-    return "Text display"
+    return "Text"
   } else if (button_type=='url'){
-    return "Go to url" 
+    return "Linking website" 
   } else if (button_type=='next_flow'){
-    return "Next flow" 
+    return "Chain" 
   } else if (button_type=='document'){
     return "Document" 
   } else if (button_type=='video'){
@@ -825,8 +814,10 @@ async function uploadFile(event,button_id,type){
   formData.append("phone_number_id", selected_phone_number_id.value);    
   let response = await formdataRequest("upload_file_to_wasabi",formData,token)
   if (response.status === 200) {
+    console.log(response)
     if(response['data']['status_code'] == 200){
       let media_id = response['data']['message']
+      console.log(media_id)
       button['media_id'] = media_id
       isLoading.value = false
       showToast("File uploaded & sent to WhatsApp successfully!");
@@ -911,11 +902,13 @@ async function createInteractiveList(){
     payload['is_parent'] = "yes"
     payload['parent_id'] = parent_id.value
   }
+  payload['x_position'] = 200
+  payload['y_position'] = 200
   let response = await postRequest("create_interactive_list",payload,token)
   if(response['data']['status'] == "success"){
     let response_message = "Interactive List is created"
     showToast(response_message)
-    nodeWithList(response['data']['data'],4)
+    nodeWithList(response['data']['data'])
     getParentNodeWithChildren
 
   } else {
@@ -935,25 +928,31 @@ async function EditNode(data){
   selected_node.value = JSON.parse(await getNode("message-"+data['id']))
 }
 
-function editButton(){
-  if(selected_node.value.buttons.length < 3){
-    const random_generated_id = generate_random_number()
-    selected_node.value.buttons.push({
-        'id':random_generated_id,
-        'button_type':button_type.value,
-        'url_header_text':'',
-        'url_body_text':'',
-        'url_footer_text':'',
-        'url_button_text':'',
-        'url':'',
-        'file':'',
-        'media_id':'',
-        'title':'',
-        'button_text':''
-      })
-  } else {
-    let response_message = "3 buttons are maximum"
-    showToast(response_message)
+function editComponent(component){
+  editButton(component.type)
+}
+
+function editButton(button_type){
+  if(button_type){
+    if(selected_node.value.buttons.length < 3){
+      const random_generated_id = generate_random_number()
+      selected_node.value.buttons.push({
+          'id':random_generated_id,
+          'button_type':button_type,
+          'url_header_text':'',
+          'url_body_text':'',
+          'url_footer_text':'',
+          'url_button_text':'',
+          'url':'',
+          'file':'',
+          'media_id':'',
+          'title':'',
+          'button_text':''
+        })
+    } else {
+      let response_message = "3 buttons are maximum"
+      showToast(response_message)
+    }
   }
 }
 
@@ -975,6 +974,8 @@ async function editNodeWithButtons(){
   if(response['data']['status'] == 200){
     let response_message = response['data']['message']
     showToast(response_message)
+    nodes.value = []
+    edges.value = []
     getParentNodeWithChildren()
   } else {
     let response_message = response['data']['message']
@@ -1057,6 +1058,8 @@ async function handleDeleteNode(data){
   if(response['data']['status'] == 200){
     let response_message = response['data']['message']
     showToast(response_message)
+    nodes.value = []
+    edges.value = []
     getParentNodeWithChildren()
   } else {
     let response_message = response['data']['message']
@@ -1070,6 +1073,8 @@ async function handleDeleteList(data){
   if(response['data']['status'] == 200){
     let response_message = response['data']['message']
     showToast(response_message)
+    nodes.value = []
+    edges.value = []
     getParentNodeWithChildren()
   } else {
     let response_message = response['data']['message']
@@ -1077,8 +1082,76 @@ async function handleDeleteList(data){
   }
 }
 
+//Event handlers
+const onNodesChange = (changes) => {
+    if (changes.some(c => c.type === 'position')) {
+      armIdleSave(changes) // restart 5s countdown after each movement tick
+    }
+};
 
-checkLogin()
+function armIdleSave(changes) {
+  for (const c of changes) {
+    if (c.type === 'position' && c.id) {
+      pendingIds.add(c.id)
+      if (c.position) {
+        // this is the latest reported coords during the drag
+        lastPositions.set(c.id, { x: c.position.x, y: c.position.y })
+      }
+    }
+  }
+  if (idleTimer) clearTimeout(idleTimer)
+  idleTimer = setTimeout(() => flushSaves(), IDLE_MS)
+}
+
+async function flushSaves() {
+  const ids = Array.from(pendingIds)
+  pendingIds.clear()
+  const payload = ids.map(id => {
+    // prefer the last coords we saw in a change payload...
+    const cached = lastPositions.get(id)
+    // ...otherwise read the final applied coords from store
+    const pos = cached ?? { x: 0, y: 0 }
+    // cleanup cache for this id
+    lastPositions.delete(id)
+    return { id, x: pos.x, y: pos.y }
+  })
+
+  await saveNodePositions(payload) // your API call
+}
+
+async function saveNodePositions(payload){
+  let response = await postRequest("update_positon",payload,token)
+  if(response['data']['status'] == 200){
+    let response_message = "Position is updated"
+    showToast(response_message)
+    getParentNodeWithChildren()
+  } else {
+    let response_message = "Failed to update their position"
+    showToast(response_message)
+  }
+}
+
+
+
+onBeforeUnmount(() => {
+  if (idleTimer) clearTimeout(idleTimer)
+})
+
+onMounted(() => {
+  checkLogin()
+  if(state.message){
+    existing_message.value = JSON.parse(state.message)
+    // assign parent id if the message from state is parent message
+    if(existing_message.value.is_parent == 'yes'){
+      parent_id.value = existing_message.value.id
+    }
+    // generating nodes and messages with edges
+    generateStoryBoard()
+  }
+  getLandingPages()
+});
+
+
 
 
 </script>
@@ -1206,7 +1279,7 @@ checkLogin()
     <div class="modal-dialog modal-lg">
       <div class="modal-content">
         <div class="modal-header">
-          <h5 class="modal-title">Edit Node</h5>
+          <h5 class="modal-title">Edit</h5>
           <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
         </div>
 
@@ -1225,183 +1298,153 @@ checkLogin()
                   <label class="form-label" for="exampleFormControlSelect1" style="font-weight:normal;">Message</label>
                   <textarea class="form-control" id="exampleFormControlTextarea1" rows="3" v-model="selected_node.message" placeholder="" required></textarea>
                 </div>
+                
                 <div class="form-group mb-3">
-                  <label class="form-label" for="exampleFormControlSelect1" style="font-weight:normal;">Button Types</label>
-                  <v-select v-model="button_type" :options="button_types" label="label" :reduce="loc => loc.value" @update:modelValue="editButton" required></v-select>
+                  <label class="form-label" for="exampleFormControlSelect1" style="font-weight:normal;">Buttons</label>
+                  <div class="row">
+                        <div class="col-md-3">
+                            <draggable
+                                :list="button_types"
+                                :group="{ name: 'components', pull: 'clone', put: false }"
+                                item-key="type"
+                                :clone="editComponent"
+                                tag="div"                              
+                                class="d-flex"
+                                >
+                                <template #item="{ element }">
+                                    <div class="bg-gray-100 p-2 rounded cursor-grab me-2">
+                                    {{ element.label }}
+                                    </div>
+                                </template>
+                            </draggable>
+                        </div>
+                  </div>
                 </div>
               </div>
             </div>
               <div class="row">
-                <hr style="color:black;">
-                <div class="col-xl-12" v-for="button in selected_node.buttons">
-                  <fragment v-if="button.button_type =='text'">
-                    <div class="form-group mb-3">
-                      <label class="form-label" for="exampleFormControlSelect1" style="font-weight:normal;">
-                        <button type="button" class="btn btn-info">{{getType(button.button_type)}}</button>
-                      </label>
-                    </div>
-                    <div class="form-group mb-3">
-                      <label class="form-label" for="exampleFormControlSelect1" style="font-weight:normal;">Title</label>
-                      <input type="text" class="form-control" placeholder="" maxlength="20" v-model="button.title"/>
-                    </div>
-                    <div class="form-group mb-3">
-                      <label class="form-label" for="exampleFormControlSelect1" style="font-weight:normal;">Message</label>
-                      <input type="text" class="form-control" placeholder="" v-model="button.button_text"/>
-                    </div>
-                    <div class="form-group mb-3">
-                      <button type="button" class="btn btn-danger" @click="deleteExistedButton(button.id)">Delete</button>
-                    </div>
-                    <hr style="color:#e6180d;">
-                  </fragment>
+                <draggable
+                    v-model="selected_node.buttons"
+                    :group="{ name: 'components', pull: true, put: true }"
+                    :clone="(component) => editComponent(component)"
+                    item-key="id"
+                    tag="div"
+                    class="d-flex flex-column gap-3 mt-2 border p-3 rounded bg-light"
+                >
+                    <template #item="{ element,index }">
+                        <div class="p-3 bg-white border rounded shadow-sm">
+                            <!-- Editable label input (shown immediately after drop) -->
+                            <fragment v-if="element.button_type =='text'">
+                              <div class="form-group mb-3">
+                                <label class="form-label" for="exampleFormControlSelect1" style="font-weight:normal;">
+                                  <button type="button" class="btn btn-info">{{getType(element.button_type)}}</button>
+                                </label>
+                              </div>
+                              <div class="form-group mb-3">
+                                <label class="form-label" for="exampleFormControlSelect1" style="font-weight:normal;">Title</label>
+                                <input type="text" class="form-control" placeholder="" maxlength="20" v-model="element.title"/>
+                              </div>
+                              <div class="form-group mb-3">
+                                <label class="form-label" for="exampleFormControlSelect1" style="font-weight:normal;">Message</label>
+                                <input type="text" class="form-control" placeholder="" v-model="element.button_text"/>
+                              </div>
+                            </fragment>
+                            <fragment v-if="element.button_type =='url'">
 
-                  <fragment v-if="button.button_type =='url'">
+                              <div class="form-group mb-3">
+                                <label class="form-label" for="exampleFormControlSelect1" style="font-weight:normal;">
+                                  <button type="button" class="btn btn-pink">{{getType(element.button_type)}}</button>
+                                </label>
+                              </div>
+                              <div class="form-group mb-3" v-if="landing_pages.length > 0">
+                                <label class="form-label" for="exampleFormControlSelect1" style="font-weight:normal;">Select Landing Page</label>
+                                <v-select v-model="selected_landing_page" :options="landing_pages" label="title" :reduce="loc => loc.title" @update:modelValue="selectLandingPage(element)"></v-select>
+                              </div>
 
-                    <div class="form-group mb-3">
-                      <label class="form-label" for="exampleFormControlSelect1" style="font-weight:normal;">
-                        <button type="button" class="btn btn-pink">{{getType(button.button_type)}}</button>
-                      </label>
-                    </div>
-
-                    <div class="form-group mb-3" v-if="landing_pages.length > 0">
-                      <label class="form-label" for="exampleFormControlSelect1" style="font-weight:normal;">Select Landing Page</label>
-                      <v-select v-model="selected_landing_page" :options="landing_pages" label="title" :reduce="loc => loc.title" @update:modelValue="selectLandingPage(button)"></v-select>
-                    </div>
-
-                    <div class="form-group mb-3">
-                      <label class="form-label" for="exampleFormControlSelect1" style="font-weight:normal;">Header</label>
-                      <input type="text" class="form-control" placeholder="" v-model="button.url_header_text"/>
-                    </div>
-                    <div class="form-group mb-3">
-                      <label class="form-label" for="exampleFormControlSelect1" style="font-weight:normal;">Body</label>
-                      <input type="text" class="form-control" placeholder="" v-model="button.url_body_text"/>
-                    </div>
-                    <div class="form-group mb-3">
-                      <label class="form-label" for="exampleFormControlSelect1" style="font-weight:normal;">Footer</label>
-                      <input type="text" class="form-control" placeholder="" v-model="button.url_footer_text"/>
-                    </div>
-                    <div class="form-group mb-3">
-                      <label class="form-label" for="exampleFormControlSelect1" style="font-weight:normal;">Url</label>
-                      <input type="text" class="form-control" placeholder="" v-model="button.url"/>
-                    </div>
-                    <div class="form-group mb-3">
-                      <label class="form-label" for="exampleFormControlSelect1" style="font-weight:normal;">Text displayed on button</label>
-                      <input type="text" class="form-control" placeholder="" maxlength="20" v-model="button.url_button_text"/>
-                    </div>
-                    <div class="form-group mb-3">
-                      <button type="button" class="btn btn-danger" @click="deleteExistedButton(button.id)">Delete</button>
-                    </div>
-                    <hr style="color:#e6180d;">
-                  </fragment>
-
-                  <fragment v-if="button.button_type =='next_flow'">
-                    <div class="form-group mb-3">
-                      <label class="form-label" for="exampleFormControlSelect1" style="font-weight:normal;">
-                        <button type="button" class="btn btn-indigo">{{getType(button.button_type)}}</button>
-                      </label>
-                    </div>
-                    <div class="form-group mb-3">
-                      <label class="form-label" for="exampleFormControlSelect1" style="font-weight:normal;">Title</label>
-                      <input type="text" class="form-control" placeholder="" maxlength="20" v-model="button.title"/>
-                    </div>
-                    <div class="form-group mb-3">
-                      <label class="form-label" for="exampleFormControlSelect1" style="font-weight:normal;">Message</label>
-                      <input type="text" class="form-control" placeholder="" v-model="button.button_text"/>
-                    </div>
-                    <div class="form-group mb-3">
-                      <button type="button" class="btn btn-danger" @click="deleteExistedButton(button.id)">Delete</button>
-                    </div>
-                    <hr style="color:#e6180d;">
-                  </fragment>
-
-                  <fragment v-if="button.button_type =='document'">
-                    
-                    <div class="form-group mb-3">
-                      <label class="form-label" for="exampleFormControlSelect1" style="font-weight:normal;">
-                        <button type="button" class="btn btn-success">{{getType(button.button_type)}}</button>
-                      </label>
-                    </div>
-
-                    <div class="form-group mb-3">
-                      <label class="form-label" for="exampleFormControlSelect1" style="font-weight:normal;">Title</label>
-                      <input type="text" class="form-control" placeholder="" maxlength="20" v-model="button.title"/>
-                    </div>
-
-                    <div class="form-group mb-3" v-if="button.media_id">
-                      <label class="form-label" for="exampleFormControlSelect1" style="font-weight:normal;">Media</label>
-                      {{button.media_id}}
-                    </div>
-
-                    <div class="form-group mb-3">
-                      <input type="file" class="form-control" id="defaultFile" @change="uploadFile($event,button.id,'change')" accept="application/pdf"/>
-                    </div>
-                    
-                    
-                    <div class="form-group mb-3">
-                      <button type="button" class="btn btn-danger" @click="deleteExistedButton(button.id)">Delete</button>
-                    </div>
-                    <hr style="color:#e6180d;">
-                  </fragment>
-
-                  <fragment v-if="button.button_type =='image'">
-                    
-                    <div class="form-group mb-3">
-                      <label class="form-label" for="exampleFormControlSelect1" style="font-weight:normal;">
-                        <button type="button" class="btn btn-success">{{getType(button.button_type)}}</button>
-                      </label>
-                    </div>
-
-                    <div class="form-group mb-3">
-                      <label class="form-label" for="exampleFormControlSelect1" style="font-weight:normal;">Title</label>
-                      <input type="text" class="form-control" placeholder="" maxlength="20" v-model="button.title"/>
-                    </div>
-
-                    <div class="form-group mb-3" v-if="button.media_id">
-                      <label class="form-label" for="exampleFormControlSelect1" style="font-weight:normal;">Media</label>
-                      {{button.media_id}}
-                    </div>
-
-                    <div class="form-group mb-3">
-                      <input type="file" class="form-control" id="defaultFile" @change="uploadFile($event,button.id,'change')" accept="image/*"/>
-                    </div>
-                    
-                    
-                    <div class="form-group mb-3">
-                      <button type="button" class="btn btn-danger" @click="deleteExistedButton(button.id)">Delete</button>
-                    </div>
-                    <hr style="color:#e6180d;">
-                  </fragment>
-
-                  <fragment v-if="button.button_type =='video'">
-                    
-                    <div class="form-group mb-3">
-                      <label class="form-label" for="exampleFormControlSelect1" style="font-weight:normal;">
-                        <button type="button" class="btn btn-success">{{getType(button.button_type)}}</button>
-                      </label>
-                    </div>
-
-                    <div class="form-group mb-3">
-                      <label class="form-label" for="exampleFormControlSelect1" style="font-weight:normal;">Title</label>
-                      <input type="text" class="form-control" placeholder="" maxlength="20" v-model="button.title"/>
-                    </div>
-
-                    <div class="form-group mb-3" v-if="button.media_id">
-                      <label class="form-label" for="exampleFormControlSelect1" style="font-weight:normal;">Media</label>
-                      {{button.media_id}}
-                    </div>
-
-                    <div class="form-group mb-3">
-                      <input type="file" class="form-control" id="defaultFile" @change="uploadFile($event,button.id,'change')" accept="video/*"/>
-                    </div>
-                    
-                    
-                    <div class="form-group mb-3">
-                      <button type="button" class="btn btn-danger" @click="deleteExistedButton(button.id)">Delete</button>
-                    </div>
-                    <hr style="color:#e6180d;">
-                  </fragment>
-                </div>
+                              <div class="form-group mb-3">
+                                <label class="form-label" for="exampleFormControlSelect1" style="font-weight:normal;">Header</label>
+                                <input type="text" class="form-control" placeholder="" v-model="element.url_header_text"/>
+                              </div>
+                              <div class="form-group mb-3">
+                                <label class="form-label" for="exampleFormControlSelect1" style="font-weight:normal;">Body</label>
+                                <input type="text" class="form-control" placeholder="" v-model="element.url_body_text"/>
+                              </div>
+                              <div class="form-group mb-3">
+                                <label class="form-label" for="exampleFormControlSelect1" style="font-weight:normal;">Footer</label>
+                                <input type="text" class="form-control" placeholder="" v-model="element.url_footer_text"/>
+                              </div>
+                              <div class="form-group mb-3">
+                                <label class="form-label" for="exampleFormControlSelect1" style="font-weight:normal;">Url</label>
+                                <input type="text" class="form-control" placeholder="" v-model="element.url"/>
+                              </div>
+                              <div class="form-group mb-3">
+                                <label class="form-label" for="exampleFormControlSelect1" style="font-weight:normal;">Text displayed on button</label>
+                                <input type="text" class="form-control" placeholder="" maxlength="20" v-model="element.url_button_text"/>
+                              </div>
+                            </fragment>
+                            <fragment v-if="element.button_type =='next_flow'">
+                              <div class="form-group mb-3">
+                                <label class="form-label" for="exampleFormControlSelect1" style="font-weight:normal;">
+                                  <button type="button" class="btn btn-indigo">{{getType(element.button_type)}}</button>
+                                </label>
+                              </div>
+                              <div class="form-group mb-3">
+                                <label class="form-label" for="exampleFormControlSelect1" style="font-weight:normal;">Title</label>
+                                <input type="text" class="form-control" placeholder="" maxlength="20" v-model="element.title"/>
+                              </div>
+                              <div class="form-group mb-3">
+                                <label class="form-label" for="exampleFormControlSelect1" style="font-weight:normal;">Message</label>
+                                <input type="text" class="form-control" placeholder="" v-model="element.button_text"/>
+                              </div>
+                            </fragment>
+                            <fragment v-if="element.button_type =='document'">
+                              <div class="form-group mb-3">
+                                <label class="form-label" for="exampleFormControlSelect1" style="font-weight:normal;">
+                                  <button type="button" class="btn btn-success">{{getType(element.button_type)}}</button>
+                                </label>
+                              </div>
+                              <div class="form-group mb-3">
+                                <label class="form-label" for="exampleFormControlSelect1" style="font-weight:normal;">Title</label>
+                                <input type="text" class="form-control" placeholder="" maxlength="20" v-model="element.title"/>
+                              </div>
+                              <div class="form-group mb-3">
+                                <input type="file" class="form-control" id="defaultFile" @change="uploadFile($event,element.id,'change')" accept="application/pdf"/>
+                              </div>
+                            </fragment>
+                            <fragment v-if="element.button_type =='image'">
+                              <div class="form-group mb-3">
+                                <label class="form-label" for="exampleFormControlSelect1" style="font-weight:normal;">
+                                  <button type="button" class="btn btn-success">{{getType(element.button_type)}}</button>
+                                </label>
+                              </div>
+                              <div class="form-group mb-3">
+                                <label class="form-label" for="exampleFormControlSelect1" style="font-weight:normal;">Title</label>
+                                <input type="text" class="form-control" placeholder="" maxlength="20" v-model="element.title"/>
+                              </div>
+                              <div class="form-group mb-3">
+                                <input type="file" class="form-control" id="defaultFile" @change="uploadFile($event,element.id,'change')" accept="image/*"/>
+                              </div>
+                            </fragment>
+                            <fragment v-if="element.button_type =='video'">
+                              <div class="form-group mb-3">
+                                <label class="form-label" for="exampleFormControlSelect1" style="font-weight:normal;">
+                                  <button type="button" class="btn btn-success">{{getType(element.button_type)}}</button>
+                                </label>
+                              </div>
+                              <div class="form-group mb-3">
+                                <label class="form-label" for="exampleFormControlSelect1" style="font-weight:normal;">Title</label>
+                                <input type="text" class="form-control" placeholder="" maxlength="20" v-model="element.title"/>
+                              </div>
+                              <div class="form-group mb-3">
+                                <input type="file" class="form-control" id="defaultFile" @change="uploadFile($event,element.id,'change')" accept="video/*"/>
+                              </div>
+                            </fragment>
+                            <button type="button" class="btn btn-danger mb-1 me-1" @click="deleteExistedButton(element.id)" style="margin-top:10px;">delete</button>
+                        </div>
+                    </template>
+                </draggable>
               </div>
-              <div class="row">
+              <div class="row" style="margin-top:20px;">
                 <div class="col-xl-6">
                   <div class="form-group mb-3">
                     <button type="button" class="btn btn-teal" @click="editNodeWithButtons">Edit</button>
@@ -1420,10 +1463,10 @@ checkLogin()
 
 
   <div class="modal fade" id="modalLg">
-    <div class="modal-dialog modal-lg">
+    <div class="modal-dialog modal-xl">
       <div class="modal-content">
         <div class="modal-header">
-          <h5 class="modal-title">Message with flow actions</h5>
+          <h5 class="modal-title">Message</h5>
           <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
         </div>
 
@@ -1444,170 +1487,155 @@ checkLogin()
                 </div>
                 
                 <div class="form-group mb-3">
-                  <label class="form-label" for="exampleFormControlSelect1" style="font-weight:normal;">Button Types</label>
-                  <v-select v-model="button_type" :options="button_types" label="label" :reduce="loc => loc.value" @update:modelValue="addButton" required></v-select>
+                  <label class="form-label" for="exampleFormControlSelect1" style="font-weight:normal;">Buttons</label>
+                  <div class="row">
+                        <div class="col-md-3">
+                            <draggable
+                                :list="button_types"
+                                :group="{ name: 'components', pull: 'clone', put: false }"
+                                item-key="type"
+                                :clone="cloneComponent"
+                                tag="div"                              
+                                class="d-flex"
+                                >
+                                <template #item="{ element }">
+                                    <div class="bg-gray-100 p-2 rounded cursor-grab me-2">
+                                    {{ element.label }}
+                                    </div>
+                                </template>
+                            </draggable>
+                        </div>
+                  </div>
                 </div>
               </div>
             </div>
             <div class="row">
-              <hr style="color:black;">
-              <div class="col-xl-12" v-for="button in buttons">
-                <fragment v-if="button.button_type =='text'">
-                  <div class="form-group mb-3">
-                    <label class="form-label" for="exampleFormControlSelect1" style="font-weight:normal;">
-                      <button type="button" class="btn btn-info">{{getType(button.button_type)}}</button>
-                    </label>
-                  </div>
-                  <div class="form-group mb-3">
-                    <label class="form-label" for="exampleFormControlSelect1" style="font-weight:normal;">Title</label>
-                    <input type="text" class="form-control" placeholder="" maxlength="20" v-model="button.title"/>
-                  </div>
-                  <div class="form-group mb-3">
-                    <label class="form-label" for="exampleFormControlSelect1" style="font-weight:normal;">Message</label>
-                    <input type="text" class="form-control" placeholder="" v-model="button.button_text"/>
-                  </div>
-                  <div class="form-group mb-3">
-                    <button type="button" class="btn btn-danger" @click="deleteButton(button.id)">Delete</button>
-                  </div>
-                  <hr style="color:#e6180d;">
-                </fragment>
+              <draggable
+                  v-model="buttons"
+                  :group="{ name: 'components', pull: true, put: true }"
+                  :clone="(component) => cloneComponent(component)"
+                  item-key="id"
+                  tag="div"
+                  class="d-flex flex-column gap-3 mt-2 border p-3 rounded bg-light"
+              >
+                  <template #item="{ element,index }">
+                      <div class="p-3 bg-white border rounded shadow-sm">
+                          <!-- Editable label input (shown immediately after drop) -->
+                          <fragment v-if="element.button_type =='text'">
+                            <div class="form-group mb-3">
+                              <label class="form-label" for="exampleFormControlSelect1" style="font-weight:normal;">
+                                <button type="button" class="btn btn-info">{{getType(element.button_type)}}</button>
+                              </label>
+                            </div>
+                            <div class="form-group mb-3">
+                              <label class="form-label" for="exampleFormControlSelect1" style="font-weight:normal;">Title</label>
+                              <input type="text" class="form-control" placeholder="" maxlength="20" v-model="element.title"/>
+                            </div>
+                            <div class="form-group mb-3">
+                              <label class="form-label" for="exampleFormControlSelect1" style="font-weight:normal;">Message</label>
+                              <input type="text" class="form-control" placeholder="" v-model="element.button_text"/>
+                            </div>
+                          </fragment>
+                          <fragment v-if="element.button_type =='url'">
 
-                <fragment v-if="button.button_type =='url'">
-                  
-                  <div class="form-group mb-3">
-                    <label class="form-label" for="exampleFormControlSelect1" style="font-weight:normal;">
-                      <button type="button" class="btn btn-pink">{{getType(button.button_type)}}</button>
-                    </label>
-                  </div>
+                            <div class="form-group mb-3">
+                              <label class="form-label" for="exampleFormControlSelect1" style="font-weight:normal;">
+                                <button type="button" class="btn btn-pink">{{getType(element.button_type)}}</button>
+                              </label>
+                            </div>
+                            <div class="form-group mb-3" v-if="landing_pages.length > 0">
+                              <label class="form-label" for="exampleFormControlSelect1" style="font-weight:normal;">Select Landing Page</label>
+                              <v-select v-model="selected_landing_page" :options="landing_pages" label="title" :reduce="loc => loc.title" @update:modelValue="selectLandingPage(element)"></v-select>
+                            </div>
 
-                  <div class="form-group mb-3" v-if="landing_pages.length > 0">
-                    <label class="form-label" for="exampleFormControlSelect1" style="font-weight:normal;">Select Landing Page</label>
-                    <v-select v-model="selected_landing_page" :options="landing_pages" label="title" :reduce="loc => loc.title" @update:modelValue="selectLandingPage(button)"></v-select>
-                  </div>
-
-                  <div class="form-group mb-3">
-                    <label class="form-label" for="exampleFormControlSelect1" style="font-weight:normal;">Header</label>
-                    <input type="text" class="form-control" placeholder="" v-model="button.url_header_text"/>
-                  </div>
-                  <div class="form-group mb-3">
-                    <label class="form-label" for="exampleFormControlSelect1" style="font-weight:normal;">Body</label>
-                    <input type="text" class="form-control" placeholder="" v-model="button.url_body_text"/>
-                  </div>
-                  <div class="form-group mb-3">
-                    <label class="form-label" for="exampleFormControlSelect1" style="font-weight:normal;">Footer</label>
-                    <input type="text" class="form-control" placeholder="" v-model="button.url_footer_text"/>
-                  </div>
-                  <div class="form-group mb-3">
-                    <label class="form-label" for="exampleFormControlSelect1" style="font-weight:normal;">Url</label>
-                    <input type="text" class="form-control" placeholder="" v-model="button.url"/>
-                  </div>
-                  <div class="form-group mb-3">
-                    <label class="form-label" for="exampleFormControlSelect1" style="font-weight:normal;">Text displayed on button</label>
-                    <input type="text" class="form-control" placeholder="" maxlength="20" v-model="button.url_button_text"/>
-                  </div>
-                  <div class="form-group mb-3">
-                    <button type="button" class="btn btn-danger" @click="deleteButton(button.id)">Delete</button>
-                  </div>
-                  <hr style="color:#e6180d;">
-                </fragment>
-
-                <fragment v-if="button.button_type =='next_flow'">
-                  <div class="form-group mb-3">
-                    <label class="form-label" for="exampleFormControlSelect1" style="font-weight:normal;">
-                      <button type="button" class="btn btn-indigo">{{getType(button.button_type)}}</button>
-                    </label>
-                  </div>
-                  <div class="form-group mb-3">
-                    <label class="form-label" for="exampleFormControlSelect1" style="font-weight:normal;">Title</label>
-                    <input type="text" class="form-control" placeholder="" maxlength="20" v-model="button.title"/>
-                  </div>
-                  <div class="form-group mb-3">
-                    <label class="form-label" for="exampleFormControlSelect1" style="font-weight:normal;">Message</label>
-                    <input type="text" class="form-control" placeholder="" v-model="button.button_text"/>
-                  </div>
-                  <div class="form-group mb-3">
-                    <button type="button" class="btn btn-danger" @click="deleteButton(button.id)">Delete</button>
-                  </div>
-                  <hr style="color:#e6180d;">
-                </fragment>
-
-                <fragment v-if="button.button_type =='document'">
-                  
-                  <div class="form-group mb-3">
-                    <label class="form-label" for="exampleFormControlSelect1" style="font-weight:normal;">
-                      <button type="button" class="btn btn-success">{{getType(button.button_type)}}</button>
-                    </label>
-                  </div>
-
-                  <div class="form-group mb-3">
-                    <label class="form-label" for="exampleFormControlSelect1" style="font-weight:normal;">Title</label>
-                    <input type="text" class="form-control" placeholder="" maxlength="20" v-model="button.title"/>
-                  </div>
-
-                  <div class="form-group mb-3">
-                    <input type="file" class="form-control" id="defaultFile" @change="uploadFile($event,button.id,'create')" accept="application/pdf"/>
-                  </div>
-                  
-                  
-                  <div class="form-group mb-3">
-                    <button type="button" class="btn btn-danger" @click="deleteButton(button.id)">Delete</button>
-                  </div>
-                  <hr style="color:#e6180d;">
-                </fragment>
-
-                <fragment v-if="button.button_type =='image'">
-                  
-                  <div class="form-group mb-3">
-                    <label class="form-label" for="exampleFormControlSelect1" style="font-weight:normal;">
-                      <button type="button" class="btn btn-success">{{getType(button.button_type)}}</button>
-                    </label>
-                  </div>
-
-                  <div class="form-group mb-3">
-                    <label class="form-label" for="exampleFormControlSelect1" style="font-weight:normal;">Title</label>
-                    <input type="text" class="form-control" placeholder="" maxlength="20" v-model="button.title"/>
-                  </div>
-
-                  <div class="form-group mb-3">
-                    <input type="file" class="form-control" id="defaultFile" @change="uploadFile($event,button.id,'create')" accept="image/*"/>
-                  </div>
-                  
-                  
-                  <div class="form-group mb-3">
-                    <button type="button" class="btn btn-danger" @click="deleteButton(button.id)">Delete</button>
-                  </div>
-                  <hr style="color:#e6180d;">
-                </fragment>
-
-                <fragment v-if="button.button_type =='video'">
-                  
-                  <div class="form-group mb-3">
-                    <label class="form-label" for="exampleFormControlSelect1" style="font-weight:normal;">
-                      <button type="button" class="btn btn-success">{{getType(button.button_type)}}</button>
-                    </label>
-                  </div>
-
-                  <div class="form-group mb-3">
-                    <label class="form-label" for="exampleFormControlSelect1" style="font-weight:normal;">Title</label>
-                    <input type="text" class="form-control" placeholder="" maxlength="20" v-model="button.title"/>
-                  </div>
-
-                  <div class="form-group mb-3">
-                    <input type="file" class="form-control" id="defaultFile" @change="uploadFile($event,button.id,'create')" accept="video/*"/>
-                  </div>
-                  
-                  
-                  <div class="form-group mb-3">
-                    <button type="button" class="btn btn-danger" @click="deleteButton(button.id)">Delete</button>
-                  </div>
-                  <hr style="color:#e6180d;">
-                </fragment>
-              </div>
+                            <div class="form-group mb-3">
+                              <label class="form-label" for="exampleFormControlSelect1" style="font-weight:normal;">Header</label>
+                              <input type="text" class="form-control" placeholder="" v-model="element.url_header_text"/>
+                            </div>
+                            <div class="form-group mb-3">
+                              <label class="form-label" for="exampleFormControlSelect1" style="font-weight:normal;">Body</label>
+                              <input type="text" class="form-control" placeholder="" v-model="element.url_body_text"/>
+                            </div>
+                            <div class="form-group mb-3">
+                              <label class="form-label" for="exampleFormControlSelect1" style="font-weight:normal;">Footer</label>
+                              <input type="text" class="form-control" placeholder="" v-model="element.url_footer_text"/>
+                            </div>
+                            <div class="form-group mb-3">
+                              <label class="form-label" for="exampleFormControlSelect1" style="font-weight:normal;">Url</label>
+                              <input type="text" class="form-control" placeholder="" v-model="element.url"/>
+                            </div>
+                            <div class="form-group mb-3">
+                              <label class="form-label" for="exampleFormControlSelect1" style="font-weight:normal;">Text displayed on button</label>
+                              <input type="text" class="form-control" placeholder="" maxlength="20" v-model="element.url_button_text"/>
+                            </div>
+                          </fragment>
+                          <fragment v-if="element.button_type =='next_flow'">
+                            <div class="form-group mb-3">
+                              <label class="form-label" for="exampleFormControlSelect1" style="font-weight:normal;">
+                                <button type="button" class="btn btn-indigo">{{getType(element.button_type)}}</button>
+                              </label>
+                            </div>
+                            <div class="form-group mb-3">
+                              <label class="form-label" for="exampleFormControlSelect1" style="font-weight:normal;">Title</label>
+                              <input type="text" class="form-control" placeholder="" maxlength="20" v-model="element.title"/>
+                            </div>
+                            <div class="form-group mb-3">
+                              <label class="form-label" for="exampleFormControlSelect1" style="font-weight:normal;">Message</label>
+                              <input type="text" class="form-control" placeholder="" v-model="element.button_text"/>
+                            </div>
+                          </fragment>
+                          <fragment v-if="element.button_type =='document'">
+                            <div class="form-group mb-3">
+                              <label class="form-label" for="exampleFormControlSelect1" style="font-weight:normal;">
+                                <button type="button" class="btn btn-success">{{getType(element.button_type)}}</button>
+                              </label>
+                            </div>
+                            <div class="form-group mb-3">
+                              <label class="form-label" for="exampleFormControlSelect1" style="font-weight:normal;">Title</label>
+                              <input type="text" class="form-control" placeholder="" maxlength="20" v-model="element.title"/>
+                            </div>
+                            <div class="form-group mb-3">
+                              <input type="file" class="form-control" id="defaultFile" @change="uploadFile($event,element.id,'create')" accept="application/pdf"/>
+                            </div>
+                          </fragment>
+                          <fragment v-if="element.button_type =='image'">
+                            <div class="form-group mb-3">
+                              <label class="form-label" for="exampleFormControlSelect1" style="font-weight:normal;">
+                                <button type="button" class="btn btn-success">{{getType(element.button_type)}}</button>
+                              </label>
+                            </div>
+                            <div class="form-group mb-3">
+                              <label class="form-label" for="exampleFormControlSelect1" style="font-weight:normal;">Title</label>
+                              <input type="text" class="form-control" placeholder="" maxlength="20" v-model="element.title"/>
+                            </div>
+                            <div class="form-group mb-3">
+                              <input type="file" class="form-control" id="defaultFile" @change="uploadFile($event,element.id,'create')" accept="image/*"/>
+                            </div>
+                          </fragment>
+                          <fragment v-if="element.button_type =='video'">
+                            <div class="form-group mb-3">
+                              <label class="form-label" for="exampleFormControlSelect1" style="font-weight:normal;">
+                                <button type="button" class="btn btn-success">{{getType(element.button_type)}}</button>
+                              </label>
+                            </div>
+                            <div class="form-group mb-3">
+                              <label class="form-label" for="exampleFormControlSelect1" style="font-weight:normal;">Title</label>
+                              <input type="text" class="form-control" placeholder="" maxlength="20" v-model="element.title"/>
+                            </div>
+                            <div class="form-group mb-3">
+                              <input type="file" class="form-control" id="defaultFile" @change="uploadFile($event,element.id,'create')" accept="video/*"/>
+                            </div>
+                          </fragment>
+                          <button type="button" class="btn btn-danger mb-1 me-1" @click="deleteButton(element.id)" style="margin-top:10px;">delete</button>
+                      </div>
+                  </template>
+              </draggable>
+              
             </div>
-            <div class="row" v-if="buttons.length > 0">
+            <div class="row" v-if="buttons.length > 0" style="margin-top:20px;">
                 <div class="col-xl-6">
                   <div class="form-group mb-3">
-                    <button type="button" class="btn btn-teal" @click="createMessageWithButtons">Create message with flow actions</button>
+                    <button type="button" class="btn btn-teal" @click="createMessageWithButtons">Create message</button>
                   </div>
                 </div>
             </div>
@@ -1693,7 +1721,7 @@ checkLogin()
             <div class="row" style="margin-top:20px;">
                 <div class="col-xl-6">
                   <div class="form-group mb-3">
-                    <button type="button" class="btn btn-teal" @click="createInteractiveList">Create Interactive List</button>
+                    <button type="button" class="btn btn-teal" @click="createInteractiveList">Create list</button>
                   </div>
                 </div>
             </div>
@@ -1709,13 +1737,13 @@ checkLogin()
   <card>
       <card-body class="pb-2" style="border-bottom:1px solid #ccc;" v-if='is_interactive_list_existed == false'>
         <div class="row">
-          <div class="col-md-6">
+          <div class="col-md-3">
             <div class="row" id="marin_top_10">
-              <div class="col-md-3">
-                <button type="button" class="btn btn-warning me-2" data-bs-toggle="modal" data-bs-target="#modalLg">Create message with flow actions</button>
+              <div class="col-md-6">
+                <button type="button" class="btn btn-teal me-2" data-bs-toggle="modal" data-bs-target="#modalLg">Create message</button>
               </div>
-              <div class="col-md-3">
-                <button type="button" class="btn btn-secondary me-2" data-bs-toggle="modal" data-bs-target="#modalLg1">Create interactive list message</button>
+              <div class="col-md-6">
+                <button type="button" class="btn btn-teal me-2" data-bs-toggle="modal" data-bs-target="#modalLg1">Create list</button>
               </div>
             </div>
           </div>
@@ -1723,16 +1751,22 @@ checkLogin()
       </card-body>
       <div class="flow-container">
         <VueFlow
+          :class="{ dark }"
+          class="basic-flow"
           :nodes="nodes"
           :edges="edges"
           :nodeTypes="nodeTypes"
           @nodesChange="onNodesChange"
           @edgesChange="onEdgesChange"
           @connect="onConnect"
+          :fit-view-on-init="true"
+          :min-zoom="0.2"
+          :max-zoom="0.9" 
+          :default-zoom="0.7"
         >
           
-          <Background :gap="12"/>
-          <Controls />
+          <Background pattern-color="#aaa" :gap="16" />
+          
           <MiniMap />
           <template #node-buttonNode="{ id, data }">
             <ButtonNode

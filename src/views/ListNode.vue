@@ -3,167 +3,188 @@ import { ref } from "vue";
 import { Handle } from "@vue-flow/core";
 import 'vue-select/dist/vue-select.css';
 
-
 const props = defineProps({
-  data: {
-    type: Object,
-    required: true,
-  },
-  color: {
-    type: String,
-    default: "#c9d2e3",
-  },
+  data: { type: Object, required: true },
+  color: { type: String, default: "#F78CA0" }, // kept for backward-compat (unused for gradient)
 });
 
+const emit = defineEmits(['open-edit-list', 'delete-list']);
 
-const emit = defineEmits(['open-edit-list', 'delete-list'])
-
-function openEditModal() {
-  emit('open-edit-list', props.data);
-}
-
-function handleDelete() {
-  emit('delete-list', props.data);
-}
+function openEditModal() { emit('open-edit-list', props.data); }
+function handleDelete() { emit('delete-list', props.data); }
 
 const expandedSections = ref(new Set());
-
-
-function toggleSection(id,rows) {
-  if (expandedSections.value.has(id)) {
-    expandedSections.value.delete(id);
-  } else {
-    expandedSections.value.add(id);
-  }
+function toggleSection(id) {
+  if (expandedSections.value.has(id)) expandedSections.value.delete(id);
+  else expandedSections.value.add(id);
 }
-
 </script>
 
 <style scoped>
-.custom-node {
-  border: 1px solid #ddd;
-  border-radius: 8px;
-  background-color: #fff;
-  width: 200px;
-  font-family: Arial, sans-serif;
+:root{
+  --text:#1f2937;
+  --muted:#4b5563;
+  --ring:rgba(0,0,0,.06);
+  --gold:#CBA35C;    /* champagne gold */
+  --ivory:#ffffff;   /* header text */
 }
 
-.node-header {
-  display: flex;
-  justify-content: space-between;
-  padding: 10px;
-  border-bottom: 1px solid #ddd;
-  border-top-left-radius: 8px;
-  border-top-right-radius: 8px;
-  font-weight: bold;
-  color: #fff;
+/* ===== Card ===== */
+.custom-node{
+  width: 380px;                     /* bigger */
+  border-radius: 16px;              /* elegant */
+  background:#fff;
+  border:1px solid #e5e7eb;
+  box-shadow:
+    0 2px 6px rgba(0,0,0,.05),
+    0 12px 24px rgba(0,0,0,.08);
+  overflow: hidden;
+  font-family: ui-sans-serif, system-ui, -apple-system, "Segoe UI", Roboto, Arial;
+  color: var(--text);
 }
 
-.node-title {
-  font-size: 14px;
+/* ===== Header (pink → light blue) ===== */
+.node-header{
+  display:flex;
+  align-items:center;
+  justify-content:space-between;
+  gap:8px;
+  padding:16px 18px;
+  border-bottom:1px solid #e5e7eb33;
+  font-weight:700;
+  letter-spacing:.2px;
+  color: #fff;           /* white header text */
+  background: #F78CA0
 }
 
-.node-menu {
-  cursor: pointer;
+
+.node-title{
+  font-size:16px;
+  line-height:1.2;
+  white-space:nowrap;
+  text-overflow:ellipsis;
+  overflow:hidden;
 }
 
-.node-content {
-  padding: 10px;
-  font-size: 12px;
+/* header buttons blend nicely on gradient */
+.btn-group .btn{
+  border-radius:10px;
+  padding:6px 10px;
+  font-size:12px;
+  border:1px solid rgba(255,255,255,.35);
+  background:rgba(255,255,255,.18);
+  color:#fff;
+  backdrop-filter: blur(4px);
+}
+.btn-group .btn:hover{ background:rgba(255,255,255,.25); }
+
+/* ===== Content ===== */
+.node-content{
+  padding:16px 18px;
+  font-size:14px;
+  line-height:1.6;
+  color:var(--muted);
+  border-bottom:1px dashed #e5e7eb;
 }
 
-.node-buttons {
-  padding: 10px;
-  display: flex;
-  flex-direction: column;
-  gap: 10px;
+/* ===== Sections & Rows ===== */
+.node-buttons{
+  padding:12px 0; /* top/bottom only; inner handles spacing separately */
+  max-height: 260px;               /* scroll if long */
+  overflow:auto;
+}
+.node-buttons::-webkit-scrollbar{ width:8px; }
+.node-buttons::-webkit-scrollbar-thumb{ background:#e5e7eb; border-radius:8px; }
+
+.node-inner-padding{
+  padding:0 14px;                  /* L/R padding */
+  display:flex;
+  flex-direction:column;
+  gap:10px;
 }
 
-.node-button {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  border: 1px solid #ddd;
-  border-radius: 4px;
-  padding: 6px 12px;
-  background-color: #f9f9f9;
-  font-size: 12px;
-  cursor: pointer;
-  position: relative;
-  margin-bottom:5px;
+/* section row (collapsible header) */
+.node-button{
+  position:relative;
+  display:grid;
+  grid-template-columns: 1fr auto;
+  align-items:center;
+  gap:8px;
+  padding:10px 12px;
+  border-radius:12px;
+  background:#f9fafb;
+  border:1px solid #eef0f3;
+  transition: transform .08s ease, box-shadow .15s ease, background .15s ease;
+  cursor:pointer;
+}
+.node-button:hover{
+  background:#f3f4f6;
+  box-shadow:0 2px 8px rgba(0,0,0,.06);
+  transform: translateY(-1px);
+}
+.node-button span{ font-size:13px; font-weight:600; color:#374151; }
+
+/* child rows */
+.section-rows{
+  display:flex;
+  flex-direction:column;
+  gap:8px;
+  padding-left:12px;
+  margin-top:6px;
+  margin-bottom:6px;
+}
+.row-button{
+  display:flex;
+  align-items:center;
+  justify-content:space-between;
+  border:1px solid #e6eaf2;
+  border-radius:10px;
+  padding:8px 12px;
+  background:#f4f7fb;
+  font-size:13px;
 }
 
-.node-button:hover {
-  background-color: #f1f1f1;
+/* ===== Handles (gold, larger) ===== */
+.button-handle,
+:deep(.vue-flow__handle){
+  /* ensure consistent base */
 }
-
-.node-button span {
-  pointer-events: none;
+.handle-gold{
+  position:absolute;
+  width:14px; height:14px;
+  background-color: var(--gold);
+  border:2px solid #fff;
+  border-radius:50%;
+  box-shadow:0 0 0 3px var(--ring);
+  transition: transform .08s ease;
 }
+.handle-gold:hover{ transform: scale(1.08); }
 
-.button-handle {
-  position: absolute;
-  width: 10px;
-  height: 10px;
-  background-color: #007bff;
-  border-radius: 50%;
-}
-
-.button-handle-target {
-  left: -15px; /* Position to the left */
-  top: 50%;
+/* positions for section handles */
+.button-handle-target{
+  left:-18px;
+  top:50%;
   transform: translateY(-50%);
 }
-
-.button-handle-source {
-  right: -15px; /* Position to the right */
-  top: 50%;
+.button-handle-source{
+  right:-18px;
+  top:50%;
   transform: translateY(-50%);
 }
-
-.section-rows {
-  display: flex;
-  flex-direction: column;
-  gap: 5px;
-  padding-left: 10px; /* slight indent */
-  margin-bottom: 10px;
-}
-
-.node-buttons {
-  padding-top: 10px;
-  padding-bottom: 10px;
-}
-
-/* New container to add left/right padding */
-.node-inner-padding {
-  padding: 0 10px; /* LEFT and RIGHT padding */
-  display: flex;
-  flex-direction: column;
-  gap: 6px;
-}
-
-.row-button {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  border: 1px solid #ccc;
-  border-radius: 4px;
-  padding: 6px 12px;
-  background-color: #eef2f7;
-  font-size: 12px;
-  position: relative;
-}
-
 </style>
 
 <template>
-  
+  <!-- You can override the gradient pair on a per-node basis like:
+       :style="{ '--gradA':'#F4A6C2', '--gradB':'#7CC6F9' }" -->
   <div class="custom-node">
-    <div class="node-header" :style="{ backgroundColor: color }">
+    <div class="node-header">
       <span class="node-title">{{ data.title }}</span>
       <div class="btn-group">
-        <button type="button" class="btn btn-default btn-sm" data-bs-toggle="modal" data-bs-target="#modalLg4" @click="openEditModal">edit</button>
-        <button type="button" class="btn btn-default btn-sm" @click="handleDelete" v-if="data.is_parent != 'yes'">delete</button>
+        <button type="button" class="btn btn-default btn-sm"
+                data-bs-toggle="modal" data-bs-target="#modalLg4"
+                @click="openEditModal">edit</button>
+        <button type="button" class="btn btn-default btn-sm"
+                @click="handleDelete" v-if="data.is_parent != 'yes'">delete</button>
       </div>
     </div>
 
@@ -175,26 +196,23 @@ function toggleSection(id,rows) {
 
     <div class="node-buttons">
       <div class="node-inner-padding">
-        <!-- Sections + rows here -->
         <div v-for="(section, index) in data.sections" :key="section.id">
-          <!-- Section -->
+          <!-- Section header -->
           <div class="node-button" @click="toggleSection(section.id)">
             <span>{{ section.title }}</span>
-            
             <Handle
               :id="`section-${section.id}-target`"
+              type="target"
               position="left"
-              class="button-handle button-handle-target"
+              class="handle-gold button-handle-target"
             />
           </div>
 
-          <!-- Rows -->
+          <!-- Child rows -->
           <div v-if="expandedSections.has(section.id)" class="section-rows">
-            <div
-              v-for="(row, rIndex) in section.rows"
-              :key="`${section.id}-row-${rIndex}`"
-              class="row-button"
-            >
+            <div v-for="(row, rIndex) in section.rows"
+                 :key="`${section.id}-row-${rIndex}`"
+                 class="row-button">
               <span>{{ row.title }}</span>
             </div>
           </div>
