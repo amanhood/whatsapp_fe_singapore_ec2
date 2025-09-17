@@ -68,6 +68,12 @@ defineProps({
   margin: 0;
 }
 
+.node-button:hover{
+  background:#f3f4f6;
+  box-shadow:0 2px 8px rgba(0,0,0,.06);
+  transform: translateY(-1px);
+}
+
 /* ===== Handle (grand accent) ===== */
 :deep(.vue-flow__handle) {
   /* ensure our custom handle styles win */

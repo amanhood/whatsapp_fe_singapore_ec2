@@ -909,6 +909,8 @@ async function createInteractiveList(){
     let response_message = "Interactive List is created"
     showToast(response_message)
     nodeWithList(response['data']['data'])
+    nodes.value = []
+    edges.value = []
     getParentNodeWithChildren
 
   } else {
@@ -1014,6 +1016,7 @@ function addExistingRow(section_id){
 }
 
 function deleteExistingSection(section_id){
+  console.log(section_id)
   if(selected_interactivelist.value.sections.length > 1){
     const index = selected_interactivelist.value.sections.findIndex(item => item.id === section_id)
     if (index !== -1) {
@@ -1045,6 +1048,8 @@ async function editInteractiveList(){
   if(response['data']['status'] == 200){
     let response_message = response['data']['message']
     showToast(response_message)
+    nodes.value = []
+    edges.value = []
     getParentNodeWithChildren()
   } else {
     let response_message = response['data']['message']
@@ -1158,6 +1163,19 @@ onMounted(() => {
 
 <style>
 
+.accordion-button input.form-control {
+  border: none;
+  box-shadow: none;
+  background: transparent;
+}
+.accordion-button input.form-control:focus {
+  outline: none;
+  box-shadow: none;
+}
+.card.border-light {
+  border-color: #eee !important;
+}
+
 .flow-container {
   height: 100vh;
   width: 100%;
@@ -1220,43 +1238,97 @@ onMounted(() => {
                   <label class="form-label" for="exampleFormControlSelect1" style="font-weight:normal;">Text displayed on button</label>
                   <input type="text" class="form-control" placeholder="" maxlength="20" v-model="selected_interactivelist.button_text"/>
                 </div>
-                <div class="form-group mb-3">
-                  <button type="button" class="btn btn-teal me-2" @click="addExistngSection()">Add section</button>
+                <div class="mb-3 d-flex justify-content-between align-items-center">
+                  <div class="fw-bold">Sections <small class="text-muted">({{ sections.length }}/10)</small></div>
+                  <div>
+                    <button type="button"
+                            class="btn btn-sm btn-outline-success"
+                            :disabled="sections.length >= 10"
+                            @click="addExistngSection()">
+                      <i class="material-icons align-middle" style="font-size:18px;">add</i> Add section
+                    </button>
+                  </div>
                 </div>
               </div>
             </div>
             <div class="row">
-              <hr style="color:black;">
-              <div class="col-xl-12" v-for="section in selected_interactivelist.sections">
-                
-                <div class="form-group mb-3">
-                  <label class="form-label" for="exampleFormControlSelect1" style="font-weight:normal;"><b>Section Title</b></label>
-                  <input type="text" class="form-control" placeholder="" maxlength="20" v-model="section.title"/>
-                </div>
+              <draggable
+                v-model="selected_interactivelist.sections"
+                item-key="section_id"
+                handle=".drag-handle"
+                class="accordion"
+                tag="div">
+                <template #item="{ element: section }">
+                  <div class="accordion-item mb-2 shadow-sm rounded">
+                    <h2 class="accordion-header">
+                      <button class="accordion-button collapsed py-2" type="button"
+                              :data-bs-target="'#sec-'+section.section_id" data-bs-toggle="collapse">
+                        <span class="drag-handle me-2 text-muted" title="Drag to reorder">
+                          <i class="material-icons" style="font-size:18px; cursor:grab;">drag_indicator</i>
+                        </span>
+                        <input class="form-control form-control-sm me-2"
+                              placeholder="Title of section, please input"
+                              maxlength="20"
+                              v-model="section.title"
+                              @click.stop />
+                        <span class="badge bg-secondary">{{ section.rows.length }} row(s)</span>
+                        <div class="ms-auto d-flex gap-2" style="padding-left:10px;padding-right:10px;">
+                          <button class="btn btn-sm btn-outline-danger"
+                                  @click.stop="deleteExistingSection(section.id)">
+                            Del
+                          </button>
+                        </div>
+                      </button>
+                    </h2>
 
-                <div class="form-group mb-3">
-                  <button type="button" class="btn btn-lime me-2" @click="addExistingRow(section.id)">Add Row</button>
-                </div>
-               
-                <fragment v-for="row in section.rows">
-                  <div class="form-group mb-3">
-                    <label class="form-label" for="exampleFormControlSelect1" style="font-weight:normal;">Row Title</label>
-                    <input type="text" class="form-control" placeholder="" maxlength="20" v-model="row.title"/>
+                    <div class="accordion-collapse collapse" :id="'sec-'+section.section_id">
+                      <div class="accordion-body">
+
+                        <!-- Rows -->
+                        <draggable v-model="section.rows" item-key="id" handle=".row-drag" tag="div" class="d-grid gap-2">
+                          <template #item="{ element: row }">
+                            <div class="card border-light">
+                              <div class="card-body py-2 px-2">
+                                <div class="d-flex align-items-center gap-2">
+                                  <span class="row-drag text-muted" title="Drag to reorder">
+                                    <i class="material-icons" style="font-size:18px; cursor:grab;">drag_indicator</i>
+                                  </span>
+
+                                  <!-- Inline inputs -->
+                                  <input class="form-control form-control-sm"
+                                        style="max-width: 200px;"
+                                        placeholder="Row title"
+                                        maxlength="20"
+                                        v-model="row.title" />
+                                  <input class="form-control form-control-sm"
+                                        placeholder="Row description"
+                                        maxlength="72"
+                                        v-model="row.description" />
+
+                                  <button class="btn btn-sm btn-outline-danger ms-auto"
+                                          @click="deleteExistingRow(section.id, row.id)">
+                                    Del
+                                  </button>
+                                </div>
+                              </div>
+                            </div>
+                          </template>
+                        </draggable>
+
+                        <div class="mt-2 d-flex justify-content-between">
+                          <small class="text-muted">Max 10 rows per section</small>
+                          <button class="btn btn-sm btn-outline-success"
+                                  :disabled="section.rows.length >= 10"
+                                  @click="addExistingRow(section.id)">
+                            <i class="material-icons align-middle" style="font-size:18px;">add</i> Add row
+                          </button>
+                        </div>
+
+                      </div>
+                    </div>
                   </div>
-                  <div class="form-group mb-3">
-                    <label class="form-label" for="exampleFormControlSelect1" style="font-weight:normal;">Row Description</label>
-                    <input type="text" class="form-control" placeholder="" maxlength="20" v-model="row.description"/>
-                  </div>
-                  <div class="form-group mb-3">
-                    <button type="button" class="btn btn-danger" @click="deleteExistingRow(section.id,row.id)">Delete Row</button>
-                  </div>
-                  <hr style="color:#90ca4b;">
-                </fragment>
-                <div class="form-group mb-3">
-                  <button type="button" class="btn btn-danger" @click="deleteExistingSection(section.id)">Delete Section</button>
-                </div>
-                <hr style="color:black;">
-              </div>
+                </template>
+              </draggable>
             </div>
             
             <div class="row" style="margin-top:20px;">
@@ -1679,43 +1751,97 @@ onMounted(() => {
                   <label class="form-label" for="exampleFormControlSelect1" style="font-weight:normal;">Text displayed on button</label>
                   <input type="text" class="form-control" placeholder="" maxlength="20" v-model="button_text"/>
                 </div>
-                <div class="form-group mb-3">
-                  <button type="button" class="btn btn-teal me-2" @click="addSection()">Add section</button>
+                <div class="mb-3 d-flex justify-content-between align-items-center">
+                  <div class="fw-bold">Sections <small class="text-muted">({{ sections.length }}/10)</small></div>
+                  <div>
+                    <button type="button"
+                            class="btn btn-sm btn-outline-success"
+                            :disabled="sections.length >= 10"
+                            @click="addSection()">
+                      <i class="material-icons align-middle" style="font-size:18px;">add</i> Add section
+                    </button>
+                  </div>
                 </div>
               </div>
             </div>
             <div class="row">
-              <hr style="color:black;">
-              <div class="col-xl-12" v-for="section in sections">
-                
-                <div class="form-group mb-3">
-                  <label class="form-label" for="exampleFormControlSelect1" style="font-weight:normal;"><b>Section Title</b></label>
-                  <input type="text" class="form-control" placeholder="" maxlength="20" v-model="section.title"/>
-                </div>
+              <draggable
+                v-model="sections"
+                item-key="section_id"
+                handle=".drag-handle"
+                class="accordion"
+                tag="div">
+                <template #item="{ element: section }">
+                  <div class="accordion-item mb-2 shadow-sm rounded">
+                    <h2 class="accordion-header">
+                      <button class="accordion-button collapsed py-2" type="button"
+                              :data-bs-target="'#sec-'+section.section_id" data-bs-toggle="collapse">
+                        <span class="drag-handle me-2 text-muted" title="Drag to reorder">
+                          <i class="material-icons" style="font-size:18px; cursor:grab;">drag_indicator</i>
+                        </span>
+                        <input class="form-control form-control-sm me-2"
+                              placeholder="Section title"
+                              maxlength="20"
+                              v-model="section.title"
+                              @click.stop />
+                        <span class="badge bg-secondary">{{ section.rows.length }} row(s)</span>
+                        <div class="ms-auto d-flex gap-2" style="padding-left:10px;padding-right:10px;">
+                          <button class="btn btn-sm btn-outline-danger"
+                                  @click.stop="deleteSection(section.section_id)">
+                                  Del
+                          </button>
+                        </div>
+                      </button>
+                    </h2>
 
-                <div class="form-group mb-3">
-                  <button type="button" class="btn btn-lime me-2" @click="addRow(section.section_id)">Add Row</button>
-                </div>
-               
-                <fragment v-for="row in section.rows">
-                  <div class="form-group mb-3">
-                    <label class="form-label" for="exampleFormControlSelect1" style="font-weight:normal;">Row Title</label>
-                    <input type="text" class="form-control" placeholder="" maxlength="20" v-model="row.title"/>
+                    <div class="accordion-collapse collapse" :id="'sec-'+section.section_id">
+                      <div class="accordion-body">
+
+                        <!-- Rows -->
+                        <draggable v-model="section.rows" item-key="id" handle=".row-drag" tag="div" class="d-grid gap-2">
+                          <template #item="{ element: row }">
+                            <div class="card border-light">
+                              <div class="card-body py-2 px-2">
+                                <div class="d-flex align-items-center gap-2">
+                                  <span class="row-drag text-muted" title="Drag to reorder">
+                                    <i class="material-icons" style="font-size:18px; cursor:grab;">drag_indicator</i>
+                                  </span>
+
+                                  <!-- Inline inputs -->
+                                  <input class="form-control form-control-sm"
+                                        style="max-width: 200px;"
+                                        placeholder="Row title"
+                                        maxlength="20"
+                                        v-model="row.title" />
+                                  <input class="form-control form-control-sm"
+                                        placeholder="Row description"
+                                        maxlength="72"
+                                        v-model="row.description" />
+
+                                  <button class="btn btn-sm btn-outline-danger ms-auto"
+                                          @click="deleteRow(section.section_id, row.id)">
+                                    Del
+                                  </button>
+                                </div>
+                              </div>
+                            </div>
+                          </template>
+                        </draggable>
+
+                        <div class="mt-2 d-flex justify-content-between">
+                          <small class="text-muted">Max 10 rows per section</small>
+                          <button class="btn btn-sm btn-outline-success"
+                                  :disabled="section.rows.length >= 10"
+                                  @click="addRow(section.section_id)">
+                            <i class="material-icons align-middle" style="font-size:18px;">add</i> Add row
+                          </button>
+                        </div>
+
+                      </div>
+                    </div>
                   </div>
-                  <div class="form-group mb-3">
-                    <label class="form-label" for="exampleFormControlSelect1" style="font-weight:normal;">Row Description</label>
-                    <input type="text" class="form-control" placeholder="" maxlength="20" v-model="row.description"/>
-                  </div>
-                  <div class="form-group mb-3">
-                    <button type="button" class="btn btn-danger" @click="deleteRow(section.section_id,row.id)">Delete Row</button>
-                  </div>
-                  <hr style="color:#90ca4b;">
-                </fragment>
-                <div class="form-group mb-3">
-                  <button type="button" class="btn btn-danger" @click="deleteSection(section.section_id)">Delete Section</button>
-                </div>
-                <hr style="color:black;">
-              </div>
+                </template>
+              </draggable>
             </div>
             
             <div class="row" style="margin-top:20px;">

@@ -143,34 +143,19 @@ function toggleSection(id) {
   background:#f4f7fb;
   font-size:13px;
 }
+:deep(.vue-flow__handle) {
+  /* ensure our custom handle styles win */
+}
+.handle-gold {
+  position: absolute;
+  width: 14px;                     /* larger touch target */
+  height: 14px;
+  background-color: #CBA35C;       /* champagne gold */
+  border: 2px solid #fff;          /* crisp edge on any bg */
+  border-radius: 50%;
+  box-shadow: 0 0 0 3px var(--ring);
+}
 
-/* ===== Handles (gold, larger) ===== */
-.button-handle,
-:deep(.vue-flow__handle){
-  /* ensure consistent base */
-}
-.handle-gold{
-  position:absolute;
-  width:14px; height:14px;
-  background-color: var(--gold);
-  border:2px solid #fff;
-  border-radius:50%;
-  box-shadow:0 0 0 3px var(--ring);
-  transition: transform .08s ease;
-}
-.handle-gold:hover{ transform: scale(1.08); }
-
-/* positions for section handles */
-.button-handle-target{
-  left:-18px;
-  top:50%;
-  transform: translateY(-50%);
-}
-.button-handle-source{
-  right:-18px;
-  top:50%;
-  transform: translateY(-50%);
-}
 </style>
 
 <template>
@@ -204,7 +189,7 @@ function toggleSection(id) {
               :id="`section-${section.id}-target`"
               type="target"
               position="left"
-              class="handle-gold button-handle-target"
+              class="handle-gold"
             />
           </div>
 
