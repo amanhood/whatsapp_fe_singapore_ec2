@@ -34,14 +34,43 @@ export default {
 			document.getElementById('input').value = document.getElementById('input').value + selection.emoji;
 			selectionContainer.classList.remove('empty');
 		});
-  },
-  unmounted() {
-  },
+	},
+	unmounted() {
+	},
 	beforeUnmount() {
 		appOption.appContentFullHeight = false;
+	},
+	methods:{
+		selectChat(i) {
+			this.activeIndex = i
+			this.showContent = window.matchMedia('(max-width: 991.98px)').matches // show conversation on mobile
+			// scroll message body to bottom after DOM updates
+			this.$nextTick(() => {
+				const container = document.querySelector('.messenger-content-body .ps') || document.querySelector('.messenger-content-body .h-100')
+				if (container) container.scrollTop = container.scrollHeight
+			})
+		}
 	}
 }
+
 </script>
+<style scoped>
+/* Mobile pane switcher: show list OR conversation */
+@media (max-width: 991.98px) {
+  .messenger {
+    display: grid;
+    grid-template-columns: 1fr;
+  }
+  .messenger-sidebar { display: block; }
+  .messenger-content { display: none; }
+
+  .messenger.is-mobile-content .messenger-sidebar { display: none; }
+  .messenger.is-mobile-content .messenger-content { display: block; }
+}
+
+/* Make links inert (no jump) while keeping styles */
+.messenger a.messenger-link { text-decoration: none; }
+</style>
 <template>
 	<div class="messenger">
 		<div class="messenger-sidebar">
