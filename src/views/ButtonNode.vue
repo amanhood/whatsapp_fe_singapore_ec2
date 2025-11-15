@@ -1,12 +1,14 @@
 <script setup>
-import { ref } from "vue";
+import { ref, computed } from "vue";
 import { Handle } from "@vue-flow/core";
 import 'vue-select/dist/vue-select.css';
 
 const props = defineProps({
   data: { type: Object, required: true },
   color: { type: String, default: "#0B1F3A" }, // used as the primary hue
+  primary_colour: { type: String, default: "red" }, 
 });
+
 
 const emit = defineEmits(['open-edit-node', 'delete-node']);
 
@@ -16,6 +18,9 @@ function openEditModal() {
 function handleDelete() {
   emit('delete-node', props.data);
 }
+const color = computed(() => (
+  props.data.is_parent === 'yes' ? props.primary_colour : props.color
+));
 </script>
 
 <style scoped>

@@ -64,6 +64,7 @@ let remark = ref(null)
 let customer_remarks = ref([])
 let selected_phone_number = ref(null)
 const replyToMessage = ref(null)
+let new_messages = ref([])
 
 const isMobile = ref(false)
 const recomputeIsMobile = () => {
@@ -112,7 +113,7 @@ function selectAccount(){
 }
 
 async function getContactList(){
-  spin_loading.value = true
+  //spin_loading.value = true
   const offset = page.value * limit
   let payload = {
     waba_id: selected_waba_account.value,
@@ -133,7 +134,7 @@ async function getContactList(){
     notification_message.value = "Failed to get contact list"
     showToast(notification_message.value)
   }
-  spin_loading.value = false
+  //spin_loading.value = false
 }
 
 function connectToSockets() {
@@ -156,15 +157,9 @@ function connectToSockets() {
         (selected.from_number === msg.recipient_id || selected.to_number === msg.recipient_id)
 
       if (isActiveChat) {
-        conversations.value = []
-        conversation_page.value = 0
         debounceReloadConversations(selected)
       }
-
       // Always refresh contact list for preview updates
-      page.value = 0
-      contacts_list.value = []
-      hasMore.value = true
       debounceReloadContacts()
     }
     ws.onerror = (err) => console.error(`❌ WebSocket error (${groupKey}):`, err)
@@ -177,8 +172,49 @@ function connectToSockets() {
   }
 }
 
+const keyOf = m => m?.message_id || m?.id
+function appendOnlyNew(existing, incoming) {
+  if (!Array.isArray(existing) || !Array.isArray(incoming)) return
+
+  // build lookup for fast existence check
+  const existingIds = new Set(existing.map(keyOf))
+
+  for (const msg of incoming) {
+    const k = keyOf(msg)
+    if (k && !existingIds.has(k)) {
+      existing.push(msg)
+      existingIds.add(k)
+    }
+  }
+}
+
+
+async function getUpdatedConversations(contact){
+  const offset = conversation_limit * 0
+  let payload = {
+    waba_id: selected_waba_account.value,
+    phone_number_id: selected_phone_number_id.value,
+    limit: conversation_limit,
+    offset
+  }
+  payload['phone_number'] = contact.direction == 'in' ? contact.from_number : contact.to_number
+  let response = await postRequest("get_conversations",payload,token)
+  if(response.request.status == 200){
+    if (response?.data?.length) {
+      let updated_messages = response.data
+      appendOnlyNew(conversations.value,updated_messages)
+    } else {
+      hasConversationsMore.value = false
+    }
+  } else {
+    notification_message.value = "Failed to get conversations"
+    showToast(notification_message.value)
+  }
+}
+
+
 async function getConversations(contact){
-  spin_loading.value = true
+  //spin_loading.value = true
   const offset = conversation_limit * conversation_page.value
   let payload = {
     waba_id: selected_waba_account.value,
@@ -201,7 +237,7 @@ async function getConversations(contact){
     notification_message.value = "Failed to get conversations"
     showToast(notification_message.value)
   }
-  spin_loading.value = false
+  //spin_loading.value = false
 
   // ensure PS remeasures then scroll bottom
   await scrollToBottom()
@@ -214,8 +250,8 @@ async function scrollToBottom () {
   if (!el) return
   if (ps?.update) ps.update()
   // double requestAnimationFrame helps on mobile
-  el.scrollTop = el.scrollHeight
-  requestAnimationFrame(() => { el.scrollTop = el.scrollHeight })
+  //el.scrollTop = el.scrollHeight
+  //requestAnimationFrame(() => { el.scrollTop = el.scrollHeight })
 }
 
 function onContactClick(contact){
@@ -316,7 +352,7 @@ function getFileExtension(url) {
 async function sendMessage(){
   if(text_message.value){
     uploaded_file.value = {}
-    spin_loading.value = true
+    //spin_loading.value = true
     let payload = {
       waba_id: selected_waba_account.value,
       phone_number_id: selected_phone_number_id.value,
@@ -335,7 +371,7 @@ async function sendMessage(){
       notification_message.value = "Failed to send message"
       showToast(notification_message.value)
     }
-    spin_loading.value = false
+    //spin_loading.value = false
   } else {
     notification_message.value = "Please type message"
     showToast(notification_message.value)
@@ -417,13 +453,12 @@ function debounceReloadContacts() {
     reloadingContacts.value = false
   }, 300)
 }
+
 function debounceReloadConversations(contact) {
   if (reloadingConversations.value) return
   reloadingConversations.value = true
   setTimeout(async () => {
-    conversations.value = []
-    conversation_page.value = 0
-    await getConversations(contact)
+    await getUpdatedConversations(contact)
     reloadingConversations.value = false
   }, 300)
 }
@@ -688,6 +723,9 @@ html, body, #app { height: 100%; overflow: hidden; }
                   <div v-else-if="contact.message_type == 'image'">
                     <div class="messenger-text"><Camera class="w-6 h-6 text-green-600" /> Image</div>
                   </div>
+                  <div v-else-if="contact.message_type == 'sticker'">
+                    <div class="messenger-text">Sticker</div>
+                  </div>
                   <div v-else-if="contact.message_type == 'video'">
                     <div class="messenger-text"><Video class="w-6 h-6 text-green-600" /> Video</div>
                   </div>
@@ -897,6 +935,9 @@ html, body, #app { height: 100%; overflow: hidden; }
                     <div v-else-if="conversation.message_type == 'image'">
                       <a :href="conversation.display_url"><img :src="conversation.display_url" class="image-small" /></a>
                     </div>
+                    <div v-else-if="conversation.message_type == 'sticker'">
+                      <img :src="conversation.display_url" class="image-small" />
+                    </div>
                     <div class="widget-chat-message" v-else-if="conversation.message_type == 'document'">
                       <a :href="conversation.display_url" class="white-text"><File class="w-6 h-6 text-white-600" />  Document</a>
                     </div>
@@ -967,7 +1008,11 @@ html, body, #app { height: 100%; overflow: hidden; }
                     </div>
 
                     <div class="widget-chat-status">
-                      {{ messageFormatDate(conversation.last_time) }}
+                      
+                      {{ messageFormatDate(conversation.last_time) }} 
+                      <fragment v-if="conversation.direction=='out'">
+                        by {{ conversation.by_admin}}
+                      </fragment>
                       <template v-if="conversation.delivery_status == 'failed'">
                         <X class="w-6 h-6 text-red-300" /><br />
                         {{ conversation.status_message }}<br />
