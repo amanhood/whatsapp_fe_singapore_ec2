@@ -477,7 +477,7 @@ function initializeFormData() {
           <!-- Submit -->
           <div class="section-divider"></div>
           <card-body class="text-center pb-5">
-            <button type="submit" class="btn btn-elegant btn-lg px-5">
+            <button type="submit" class="btn btn-danger btn-lg px-5">
               <i class="bi bi-check2-circle me-2"></i> Submit
             </button>
           </card-body>

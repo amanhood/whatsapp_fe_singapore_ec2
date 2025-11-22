@@ -35,6 +35,7 @@ let subaccounts = ref([])
 async function checkWaba(){
   let data = await postRequest("check_waba",null,token)
   whatsapp_accounts.value = data['data']['whatsapp_accounts']
+  console.log(whatsapp_accounts.value)
   selected_waba_account.value = whatsapp_accounts.value[0]['waba_id']
   selected_phone_number_id.value = whatsapp_accounts.value[0]['phone_number_id']
 }

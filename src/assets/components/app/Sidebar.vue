@@ -24,6 +24,8 @@ whatsapp_accounts_number.value = sessionStorage.getItem("whatsapp_accounts_numbe
 const fullMenu = [
     { text: 'Account Management', is_header: true },
     { url: '/page/sub-accounts', icon: 'fa fa-user-circle', text: 'Accounts management' },
+    { url: '/page/teams', icon: 'fa fa-user-circle', text: 'Teams management' },
+    { url: '/page/team-clients', icon: 'fa fa-user-circle', text: 'Assign customers to team' },
     { url: '/page/login', icon: 'fa fa-user-circle', text: 'Logout' },
     { is_divider: true },
     { text: 'Whatsapp and Business Account', is_header: true },

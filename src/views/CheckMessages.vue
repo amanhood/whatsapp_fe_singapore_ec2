@@ -65,6 +65,8 @@ let customer_remarks = ref([])
 let selected_phone_number = ref(null)
 const replyToMessage = ref(null)
 let new_messages = ref([])
+let team_customers = ref([])
+
 
 const isMobile = ref(false)
 const recomputeIsMobile = () => {
@@ -102,20 +104,37 @@ async function checkWaba(){
   }
 }
 
-function selectAccount(){
+async function selectAccount(){
   selected_phone_number_id.value = select_account.value.phone_number_id
   selected_waba_account.value = select_account.value.waba_id
+  selected_phone_number.value = select_account.value.phone_number
   // reset lists
   page.value = 0
   contacts_list.value = []
   hasMore.value = true
-  getContactList()
+  await getTeamsWithCustomers()
+  await getContactList()
+  // check any team 
+}
+
+async function getTeamsWithCustomers(){
+    let payload = {}
+    payload['phone_number'] = select_account.value.phone_number
+    let data = await postRequest("get_teams_with_customers",payload,token)
+    if(data.request.status == 200){
+      if(data['data']['error']){
+        let message = data['data']['error']['message']
+        showToast(message)
+      } else {
+        team_customers.value = data['data']['customers']
+      }
+    }
 }
 
 async function getContactList(){
-  //spin_loading.value = true
+  let payload = {}
   const offset = page.value * limit
-  let payload = {
+  payload = {
     waba_id: selected_waba_account.value,
     phone_number_id: selected_phone_number_id.value,
     limit,
@@ -124,7 +143,25 @@ async function getContactList(){
   let response = await postRequest("get_contact_lists",payload,token)
   if(response.request.status == 200){
     if (response?.data?.length) {
-      contacts_list.value.push(...response.data)
+      // contacts_list.value.push(...response.data)
+      // page.value += 1
+      // connectToSockets()
+      if (!team_customers.value || team_customers.value.length === 0) {
+        contacts_list.value.push(...response.data)
+        page.value += 1
+        connectToSockets()
+        return
+      }
+      // Otherwise → filter by team customers
+      const allowedNumbers = new Set(
+        team_customers.value.map(c => c.client_number)
+      )
+      const filtered = response.data.filter(c =>
+        allowedNumbers.has(c.contact_number)
+      )
+      filtered.forEach((item => {
+        contacts_list.value.push(item)
+      }))
       page.value += 1
       connectToSockets()
     } else {
@@ -134,7 +171,6 @@ async function getContactList(){
     notification_message.value = "Failed to get contact list"
     showToast(notification_message.value)
   }
-  //spin_loading.value = false
 }
 
 function connectToSockets() {
@@ -266,7 +302,7 @@ function onContactClick(contact){
 
   selected_phone_number.value = contact.direction == 'in' ? contact.from_number : contact.to_number
 
-  debounceReloadContacts()
+  //debounceReloadContacts()
   getRemarkCategories()
   getRemarks()
 }
@@ -323,7 +359,9 @@ function remarkFormatDate(delivery_datetime){
 const handleScroll = (e) => {
   const el = e.target
   const bottomReached = el.scrollTop + el.clientHeight >= el.scrollHeight - 10
-  if (bottomReached && !spin_loading.value && hasMore.value) getContactList()
+  if (bottomReached && !spin_loading.value && hasMore.value) {
+    getContactList()
+  }
 }
 
 /** MESSAGES (middle) – use PS events instead of addEventListener */
@@ -449,6 +487,7 @@ function debounceReloadContacts() {
     page.value = 0
     contacts_list.value = []
     hasMore.value = true
+    await getTeamsWithCustomers()
     await getContactList()
     reloadingContacts.value = false
   }, 300)
@@ -726,6 +765,9 @@ html, body, #app { height: 100%; overflow: hidden; }
                   <div v-else-if="contact.message_type == 'sticker'">
                     <div class="messenger-text">Sticker</div>
                   </div>
+                  <div v-else-if="contact.message_type == 'audio'">
+                    <div class="messenger-text">Audio</div>
+                  </div>
                   <div v-else-if="contact.message_type == 'video'">
                     <div class="messenger-text"><Video class="w-6 h-6 text-green-600" /> Video</div>
                   </div>
@@ -947,6 +989,25 @@ html, body, #app { height: 100%; overflow: hidden; }
                       </video>
                       <br />
                       <a :href="conversation.display_url" class="image-small"><Video class="w-6 h-6 text-white-600" />  Download</a>
+                    </div>
+                    <div v-else-if="conversation.message_type == 'audio'">
+                      <audio
+                        controls
+                        preload="metadata"
+                        style="width: 320px; height: 40px;"
+                      >
+                        <source :src="conversation.display_url" type="audio/mp4" />
+                        Your browser does not support the audio element.
+                      </audio>
+                      <br />
+                      <a
+                        :href="conversation.display_url"
+                        download
+                        class="image-small flex items-center gap-2 text-blue-600"
+                      >
+                        <i class="fa fa-download"></i>
+                        Download
+                      </a>
                     </div>
                     <div v-else-if="conversation.message_type == 'interactivelist'">
                       <div class="card-wrapper" v-if="conversation.message.interactive">
