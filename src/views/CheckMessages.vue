@@ -1,5 +1,5 @@
 <script setup>
-import { ref, watch, onMounted, onBeforeUnmount, nextTick } from 'vue'
+import { ref, watch, onMounted, onBeforeUnmount, nextTick, computed } from 'vue'
 import { useAppOptionStore } from '@/stores/app-option';
 import { useRouter, RouterLink } from 'vue-router';
 import { createPopup } from '@picmo/popup-picker';
@@ -66,6 +66,8 @@ let selected_phone_number = ref(null)
 const replyToMessage = ref(null)
 let new_messages = ref([])
 let team_customers = ref([])
+let team_customers_page = ref(0)
+const hasTeamForCurrentAccount = ref(false)
 
 
 const isMobile = ref(false)
@@ -104,30 +106,58 @@ async function checkWaba(){
   }
 }
 
+async function checkAnyTeam() {
+  const payload = {
+    waba_id: selected_waba_account.value,
+    phone_number_id: selected_phone_number_id.value,
+    phone_number: select_account.value.phone_number
+  }
+  const response = await postRequest("check_any_team", payload, token)
+  if (response.request.status === 200) {
+    hasTeamForCurrentAccount.value = (response['data']['hasTeam'])
+  } else {
+    hasTeamForCurrentAccount.value = false
+  }
+}
+
 async function selectAccount(){
   selected_phone_number_id.value = select_account.value.phone_number_id
   selected_waba_account.value = select_account.value.waba_id
   selected_phone_number.value = select_account.value.phone_number
   // reset lists
   page.value = 0
+  team_customers_page.value = 0
   contacts_list.value = []
+  team_customers.value = []
   hasMore.value = true
-  await getTeamsWithCustomers()
-  await getContactList()
-  // check any team 
+  await checkAnyTeam()
+  if (hasTeamForCurrentAccount.value) {
+    await getTeamsWithCustomers()
+  } else {
+    await getContactList()
+  }
 }
 
 async function getTeamsWithCustomers(){
     let payload = {}
+    payload['waba_id'] = selected_waba_account.value
+    payload['phone_number_id'] = selected_phone_number_id.value
     payload['phone_number'] = select_account.value.phone_number
-    let data = await postRequest("get_teams_with_customers",payload,token)
-    if(data.request.status == 200){
-      if(data['data']['error']){
-        let message = data['data']['error']['message']
-        showToast(message)
+    payload['offset'] = team_customers_page.value * limit
+    payload['limit'] = limit
+    let response = await postRequest("get_team_customers_list",payload,token)
+    if(response.request.status == 200){
+      if (response?.data?.length) {
+        team_customers.value.push(...response.data)
+        team_customers_page.value += 1
+        connectToSockets()
+        hasMore.value = true
       } else {
-        team_customers.value = data['data']['customers']
+        hasMore.value = false
       }
+    } else {
+      let message = response['data']['error']['message']
+      showToast(message)
     }
 }
 
@@ -143,27 +173,13 @@ async function getContactList(){
   let response = await postRequest("get_contact_lists",payload,token)
   if(response.request.status == 200){
     if (response?.data?.length) {
-      // contacts_list.value.push(...response.data)
-      // page.value += 1
-      // connectToSockets()
-      if (!team_customers.value || team_customers.value.length === 0) {
+      if (hasTeamForCurrentAccount.value == false) {
         contacts_list.value.push(...response.data)
         page.value += 1
         connectToSockets()
+        hasMore.value = true
         return
       }
-      // Otherwise → filter by team customers
-      const allowedNumbers = new Set(
-        team_customers.value.map(c => c.client_number)
-      )
-      const filtered = response.data.filter(c =>
-        allowedNumbers.has(c.contact_number)
-      )
-      filtered.forEach((item => {
-        contacts_list.value.push(item)
-      }))
-      page.value += 1
-      connectToSockets()
     } else {
       hasMore.value = false
     }
@@ -173,8 +189,14 @@ async function getContactList(){
   }
 }
 
+const displayContacts = computed(() => {
+  return hasTeamForCurrentAccount.value
+    ? team_customers.value
+    : contacts_list.value
+})
+
 function connectToSockets() {
-  for (const contact of contacts_list.value) {
+  for (const contact of displayContacts.value) {
     const recipient_id = contact.direction === 'in' ? contact.from_number : contact.to_number
     const phone_number_id = selected_phone_number_id.value
     const groupKey = `${phone_number_id}_${recipient_id}`
@@ -196,6 +218,7 @@ function connectToSockets() {
         debounceReloadConversations(selected)
       }
       // Always refresh contact list for preview updates
+      // Desktop auto refresh; mobile refreshes when tapping "back"
       debounceReloadContacts()
     }
     ws.onerror = (err) => console.error(`❌ WebSocket error (${groupKey}):`, err)
@@ -302,7 +325,6 @@ function onContactClick(contact){
 
   selected_phone_number.value = contact.direction == 'in' ? contact.from_number : contact.to_number
 
-  //debounceReloadContacts()
   getRemarkCategories()
   getRemarks()
 }
@@ -356,11 +378,15 @@ function remarkFormatDate(delivery_datetime){
 }
 
 /** CONTACT LIST (left) infinite scroll – keep your existing handler */
-const handleScroll = (e) => {
+const handleScroll = async (e) => {
   const el = e.target
   const bottomReached = el.scrollTop + el.clientHeight >= el.scrollHeight - 10
-  if (bottomReached && !spin_loading.value && hasMore.value) {
-    getContactList()
+  if (bottomReached && hasMore.value) {
+    if (hasTeamForCurrentAccount.value) {
+      await getTeamsWithCustomers()
+    } else {
+      await getContactList()
+    }
   }
 }
 
@@ -480,15 +506,22 @@ async function processFile(file) {
 
 function handleDragOver(event) { event.preventDefault() }
 function deleteUploadFlile(){ droppedImage.value = null; droppedImagePreview.value = null; uploaded_file.value = {} }
+
 function debounceReloadContacts() {
+  console.log("ffff")
   if (reloadingContacts.value) return
   reloadingContacts.value = true
   setTimeout(async () => {
-    page.value = 0
     contacts_list.value = []
+    team_customers.value = []
+    page.value = 0
+    team_customers_page.value = 0
     hasMore.value = true
-    await getTeamsWithCustomers()
-    await getContactList()
+    if(hasTeamForCurrentAccount.value == true){
+      await getTeamsWithCustomers()
+    } else {
+      await getContactList()
+    }
     reloadingContacts.value = false
   }, 300)
 }
@@ -500,6 +533,14 @@ function debounceReloadConversations(contact) {
     await getUpdatedConversations(contact)
     reloadingConversations.value = false
   }, 300)
+}
+
+function backToContacts() {
+  // show contact list again
+  selected_customer.value = null
+
+  // make sure we have latest contacts with unread / last message
+  debounceReloadContacts()
 }
 
 async function getRemarkCategories(){
@@ -729,7 +770,15 @@ html, body, #app { height: 100%; overflow: hidden; }
           />
 
           <!-- New button at the right side -->
-          <button
+          <button v-if="hasTeamForCurrentAccount"
+            class="btn btn-outline-secondary ms-2"
+            type="button"
+            @click="getTeamsWithCustomers"
+          >
+            <i class="fa fa-refresh"></i>
+          </button>
+
+          <button v-else
             class="btn btn-outline-secondary ms-2"
             type="button"
             @click="getContactList"
@@ -742,7 +791,7 @@ html, body, #app { height: 100%; overflow: hidden; }
       <div ref="scrollWrapperRef" class="messenger-sidebar-body">
         <perfect-scrollbar class="h-100">
           <div class="content">
-            <div class="messenger-item" v-for="(contact, index) in contacts_list" :key="contact.id || index">
+            <div class="messenger-item" v-for="(contact, index) in displayContacts" :key="contact.id || index">
               <a
                 href="#"
                 data-toggle="messenger-content"
@@ -820,7 +869,7 @@ html, body, #app { height: 100%; overflow: hidden; }
           <a
             href="#"
             class="me-2 d-inline-block d-lg-none"
-            @click.prevent="selected_customer = null"
+            @click.prevent="backToContacts"
             aria-label="Back to chats"
           >
             <i class="bi bi-chevron-left"></i>
