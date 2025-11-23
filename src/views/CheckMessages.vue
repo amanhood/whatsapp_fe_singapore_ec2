@@ -196,39 +196,39 @@ const displayContacts = computed(() => {
 })
 
 function connectToSockets() {
-  for (const contact of displayContacts.value) {
-    const recipient_id = contact.direction === 'in' ? contact.from_number : contact.to_number
-    const phone_number_id = selected_phone_number_id.value
-    const groupKey = `${phone_number_id}_${recipient_id}`
+  const phone_number_id = selected_phone_number_id.value
+  const groupKey = `${phone_number_id}`
 
-    if (socketMap.has(groupKey)) continue
-    const ws = new WebSocket(`wss://biz-api.com/ws/notifications/${phone_number_id}/${recipient_id}/`)
-    ws.onopen = () => console.log(`✅ Connected to WS for ${groupKey}`)
-    ws.onmessage = (event) => {
-      const data = JSON.parse(event.data)
-      const msg = data.message
-      const selected = selected_customer.value
+  if (socketMap.has(groupKey)) return
+  const ws = new WebSocket(`wss://biz-api.com/ws/notifications/${phone_number_id}/`)
+  ws.onopen = () => console.log(`✅ Connected to WS for ${groupKey}`)
+  ws.onmessage = (event) => {
+    const data = JSON.parse(event.data)
+    const msg = data.message
+    console.log(msg)
+    const selected = selected_customer.value
+  
+    const isActiveChat =
+      selected &&
+      selected_phone_number_id.value === msg.phone_number_id &&
+      (selected.from_number === msg.contact_number|| selected.to_number === msg.contact_number)
+    
+    console.log(isActiveChat)
 
-      const isActiveChat =
-        selected &&
-        selected_phone_number_id.value === msg.phone_number_id &&
-        (selected.from_number === msg.recipient_id || selected.to_number === msg.recipient_id)
-
-      if (isActiveChat) {
-        debounceReloadConversations(selected)
-      }
-      // Always refresh contact list for preview updates
-      // Desktop auto refresh; mobile refreshes when tapping "back"
-      debounceReloadContacts()
+    if (isActiveChat) {
+      debounceReloadConversations(selected)
     }
-    ws.onerror = (err) => console.error(`❌ WebSocket error (${groupKey}):`, err)
-    ws.onclose = () => {
-      console.warn(`🔌 WebSocket closed for ${groupKey}`)
-      socketMap.delete(groupKey)
-      setTimeout(() => connectToSockets(), 3000)
-    }
-    socketMap.set(groupKey, ws)
+    // Always refresh contact list for preview updates
+    // Desktop auto refresh; mobile refreshes when tapping "back"
+    debounceReloadContacts()
   }
+  ws.onerror = (err) => console.error(`❌ WebSocket error (${groupKey}):`, err)
+  ws.onclose = () => {
+    console.warn(`🔌 WebSocket closed for ${groupKey}`)
+    socketMap.delete(groupKey)
+    setTimeout(() => connectToSockets(), 3000)
+  }
+  socketMap.set(groupKey, ws)
 }
 
 const keyOf = m => m?.message_id || m?.id
@@ -508,7 +508,6 @@ function handleDragOver(event) { event.preventDefault() }
 function deleteUploadFlile(){ droppedImage.value = null; droppedImagePreview.value = null; uploaded_file.value = {} }
 
 function debounceReloadContacts() {
-  console.log("ffff")
   if (reloadingContacts.value) return
   reloadingContacts.value = true
   setTimeout(async () => {
