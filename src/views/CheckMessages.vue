@@ -219,7 +219,6 @@ function connectToSockets() {
       debounceReloadConversations(selected)
     }
     // Always refresh contact list for preview updates
-    // Desktop auto refresh; mobile refreshes when tapping "back"
     debounceReloadContacts()
   }
   ws.onerror = (err) => console.error(`❌ WebSocket error (${groupKey}):`, err)
