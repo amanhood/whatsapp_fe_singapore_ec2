@@ -308,9 +308,12 @@ async function scrollToBottom () {
   if (!el) return
   if (ps?.update) ps.update()
   // double requestAnimationFrame helps on mobile
-  //el.scrollTop = el.scrollHeight
-  //requestAnimationFrame(() => { el.scrollTop = el.scrollHeight })
-}
+  requestAnimationFrame(() => {
+      requestAnimationFrame(() => {
+        el.scrollTop = el.scrollHeight
+      })
+    })
+  }
 
 function onContactClick(contact){
   // on mobile: switch pane by setting selected customer first

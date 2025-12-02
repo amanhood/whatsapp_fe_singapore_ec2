@@ -41,15 +41,18 @@ const fullMenu = [
     { url: '/page/marketing-templates', icon: 'fa fa-cog', text: 'Manage templates' },
     { url: '/page/landing-pages', icon: 'fa fa-cog', text: 'Manage landing page' },
     { url: '/page/flows', icon: 'fa fa-cog', text: 'Manage whatsapp flows' },
+    { url: '/page/campaigns', icon: 'fa fa-cog', text: 'Manage campaigns' },
+    { url: '/page/coupons', icon: 'fa fa-cog', text: 'Manage coupons' },
+    { is_divider: true },
+    { text: 'Reports', is_header: true },
     { url: '/page/send-message-records', icon: 'fa fa-cog', text: 'Sent message records' },
     { url: '/page/client-choice-records', icon: 'fa fa-cog', text: 'Client choice records' },
     { url: '/page/submitted-form-records', icon: 'fa fa-cog', text: 'Submitted form records' },
     { url: '/page/submitted-flow-records', icon: 'fa fa-cog', text: 'Submitted flow records' },
-    { is_divider: true },
-    { text: 'Whatsapp Ecommerce', is_header: true },
-    { url: '/page/whatsapp-ecommerce', icon: 'fa fa-cog', text: 'Catalogue and product' },
-    { url: '/page/delivery-fee-setting', icon: 'fa fa-cog', text: 'Delivery fee setting' },
-    { url: '/page/order', icon: 'fa fa-cog', text: 'Check orders' },
+    // { text: 'Whatsapp Ecommerce', is_header: true },
+    // { url: '/page/whatsapp-ecommerce', icon: 'fa fa-cog', text: 'Catalogue and product' },
+    // { url: '/page/delivery-fee-setting', icon: 'fa fa-cog', text: 'Delivery fee setting' },
+    // { url: '/page/order', icon: 'fa fa-cog', text: 'Check orders' },
     { is_divider: true }
 ]
 const menuItems = ref([])

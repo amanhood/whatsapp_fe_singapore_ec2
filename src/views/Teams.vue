@@ -384,8 +384,7 @@ checkWaba()
 							<tr>
 								<th class="border-top-0 pt-0 pb-2">Team name</th>
                                 <th class="border-top-0 pt-0 pb-2">Phone number</th>
-								<th class="border-top-0 pt-0 pb-2">Status</th>
-                                <th class="border-top-0 pt-0 pb-2">Set Status</th>
+								<th class="border-top-0 pt-0 pb-2">Set Status</th>
                                 <th class="border-top-0 pt-0 pb-2">Staff</th>
                                 <th class="border-top-0 pt-0 pb-2">Edit</th>
                                 <th class="border-top-0 pt-0 pb-2">Delete</th>
@@ -395,7 +394,6 @@ checkWaba()
 							<tr v-for="team in teams">         
                                 <td class="align-middle">{{ team['name'] }}</td>
                                 <td class="align-middle">{{ team['phone_number'] }}</td>
-                                <td class="align-middle">{{ checkStatus(team['is_active']) }}</td>
                                 <td class="align-middle"><div class="form-check form-switch"><input type="checkbox" class="form-check-input" id="customSwitch1" @click="updateStatus(team['id'],!team['is_active'])" v-model="team.is_active"></div></td>    
                                 <td class="align-middle"><button type="button" data-bs-toggle="modal" data-bs-target="#modalLg1" @click="assignTeam(team)" class="btn btn-primary me-2">Assign</button></td>
                                 <td class="align-middle"><button type="button" data-bs-toggle="modal" data-bs-target="#modalLg" @click="editTeam(team)" class="btn btn-yellow me-2">Edit</button></td>

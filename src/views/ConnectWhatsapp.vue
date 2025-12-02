@@ -108,6 +108,18 @@ function go_auto_reply(){
   });
 }
 
+function go_flows(){
+  router.push({
+      path: '/page/flows'
+  });
+}
+
+function go_campaigns(){
+  router.push({
+      path: '/page/campaigns'
+  });
+}
+
 function go_ecommerce(){
   router.push({
       path: '/page/whatsapp-ecommerce'
@@ -228,8 +240,12 @@ window.addEventListener('message', sessionInfoListener);
                     <th class="border-top-0 pt-0 pb-2">Marketing message templates</th>
     								<th class="border-top-0 pt-0 pb-2">Auto Reply of Whatsapp Account</th>
                     <th class="border-top-0 pt-0 pb-2">Landing Pages</th>
+                    <th class="border-top-0 pt-0 pb-2">Whatsapp Flows</th>
+                    <th class="border-top-0 pt-0 pb-2">Campaigns</th>
+                    <!--
     								<th class="border-top-0 pt-0 pb-2">Whatsapp Ecommerce</th>
                     <th class="border-top-0 pt-0 pb-2">Check Ecommerce orders</th>
+                    -->
     							</tr>
     						</thead>
                 <tbody>
@@ -239,6 +255,9 @@ window.addEventListener('message', sessionInfoListener);
                     <td class="align-middle"><button type="button" class="btn btn-yellow" @click="go_marketing_templates">Access</button></td>
                     <td class="align-middle"><button type="button" class="btn btn-yellow" @click="go_auto_reply">Access</button></td>
                     <td class="align-middle"><button type="button" class="btn btn-yellow" @click="go_landing_pages">Access</button></td>
+                    <td class="align-middle"><button type="button" class="btn btn-yellow" @click="go_flows">Access</button></td>
+                    <td class="align-middle"><button type="button" class="btn btn-yellow" @click="go_campaigns">Access</button></td>
+                    <!--
     								<template v-if="hasCatalogManagement(account.permissions)">
                       <td class="align-middle"><button type="button" class="btn btn-yellow" @click="go_ecommerce">Access</button></td>
                       <td class="align-middle"><button type="button" class="btn btn-yellow" @click="go_order">Access</button></td>
@@ -247,7 +266,7 @@ window.addEventListener('message', sessionInfoListener);
                       <td class="align-middle"><button type="button" class="btn btn-primary" @click="go_ecommerce">Grant Permission</button></td>
                       <td class="align-middle"><button type="button" class="btn btn-primary" @click="go_ecommerce">Grant Permission</button></td>
                     </template>
-                    
+                    -->
                   </tr>
                 </tbody>
               </table>
