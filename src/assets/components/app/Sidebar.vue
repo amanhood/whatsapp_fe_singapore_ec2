@@ -49,6 +49,7 @@ const fullMenu = [
     { url: '/page/client-choice-records', icon: 'fa fa-cog', text: 'Client choice records' },
     { url: '/page/submitted-form-records', icon: 'fa fa-cog', text: 'Submitted form records' },
     { url: '/page/submitted-flow-records', icon: 'fa fa-cog', text: 'Submitted flow records' },
+    { url: '/page/coupon-reports', icon: 'fa fa-cog', text: 'Coupon delivery records' },
     // { text: 'Whatsapp Ecommerce', is_header: true },
     // { url: '/page/whatsapp-ecommerce', icon: 'fa fa-cog', text: 'Catalogue and product' },
     // { url: '/page/delivery-fee-setting', icon: 'fa fa-cog', text: 'Delivery fee setting' },

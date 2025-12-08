@@ -3,6 +3,7 @@ import { createRouter, createWebHistory } from "vue-router";
 const router = createRouter({
   history: createWebHistory(import.meta.env.BASE_URL),
   routes: [
+	{ path: '/page/coupon-reports', component: () => import('../views/CouponReports.vue') },
 	{ path: '/page/coupons', component: () => import('../views/Coupons.vue') },
 	{ path: '/page/campaigns', component: () => import('../views/Campaigns.vue') },
 	{ path: '/page/submitted-flow-records', component: () => import('../views/SubmittedFlowRecords.vue') },
