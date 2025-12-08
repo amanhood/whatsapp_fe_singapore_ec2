@@ -12,7 +12,7 @@ import { saveAs } from "file-saver";
 import Loading from 'vue-loading-overlay';
 import 'vue-loading-overlay/dist/css/index.css';
 
-const appOption = useAppOptionStore();
+//const appOption = useAppOptionStore();
 const props = defineProps(['component','template_name','template_category','waba_id','phone_number_id',"template_type","business_account_id","products"])
 onMounted(() => {
   // console.log(props.component);
@@ -549,9 +549,6 @@ updateBodyVariables()
   margin-bottom:20px;
 }
 
-.ps {
-  max-height: 500px; /* or height: 100px; */
-}
 
 </style>
 

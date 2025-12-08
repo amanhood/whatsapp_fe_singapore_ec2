@@ -662,7 +662,7 @@ watch(
 
 </script>
 
-<style scoped>
+<style>
 .image-small { width: 30%; }
 .white-text { color:white; }
 
@@ -944,6 +944,27 @@ html, body, #app { height: 100%; overflow: hidden; }
                       <br />
                       <a :href="conversation.display_url" class="image-small"><Video class="w-6 h-6 text-white-600" />  Download</a>
                     </div>
+
+                    <div v-else-if="conversation.message_type == 'audio'">
+                      <audio
+                        controls
+                        preload="metadata"
+                        style="width: 320px; height: 40px;"
+                      >
+                        <source :src="conversation.display_url" type="audio/mp4" />
+                        Your browser does not support the audio element.
+                      </audio>
+                      <br />
+                      <a
+                        :href="conversation.display_url"
+                        download
+                        class="image-small flex items-center gap-2 text-blue-600"
+                      >
+                        <i class="fa fa-download"></i>
+                        Download
+                      </a>
+                    </div>
+
                     <div v-else-if="conversation.message_type == 'interactivelist'">
                       <div class="card-wrapper" v-if="conversation.message.interactive">
                         <div class="whatsapp-card">

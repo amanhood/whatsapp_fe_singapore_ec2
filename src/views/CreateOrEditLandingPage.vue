@@ -35,6 +35,8 @@ let selected_waba_account = ref(null)
 let selected_phone_number_id = ref(null)
 let selected_phone_number = ref(null)
 let select_account = ref(null)
+let coupon_templates = ref([])
+let select_coupon_template = ref(null)
 
 const formComponents = ref([
   { type: 'text', label: 'Text' },
@@ -73,6 +75,7 @@ function selectAccount(){
   selected_waba_account.value = select_account.value.waba
   selected_phone_number.value = select_account.value.value
   getCampaigns()
+  getCouponTemplate()
 }
 
 async function getCampaigns(){
@@ -215,6 +218,7 @@ async function submit(){
     if(is_coupon.value == true){
         payload['campaign'] = selected_campaign.value
         payload['coupon_type'] = coupon_type.value
+        payload['whatsapp_template_id'] = select_coupon_template.value
     }
     if(select_account.value){
         payload['phone_number'] = selected_phone_number.value
@@ -333,13 +337,31 @@ function checkSendCoupon(){
         select_account.value = null
         selected_campaign.value = null
         coupon_type.value = null
+        select_coupon_template = null
+    }
+}
+
+async function getCouponTemplate(){
+    let payload = {}
+    payload['waba'] = selected_waba_account.value
+    payload['phone_number_id'] = selected_phone_number_id.value
+    let response = await postRequest("get_coupon_templates",payload,token)
+    if(response.request.status == 200){
+        response['data']['templates'].forEach((item => {
+            coupon_templates.value.push({"id":item.whatsapp_template_id,"name":item.name})
+        }))
+    } else {
+        let message = "failed to get coupon templates"
+        showToast(message)
     }
 }
 
 
 onMounted(async () => {
   checkLogin();
+  await checkWaba()
   if (props.isEdit && props.landingPageId) {
+    spin_loading.value = true
     let payload = {}
     payload['landing_page_id'] = props.landingPageId
     const response = await postRequest('get_landing_page_by_admin',payload,token);
@@ -349,13 +371,11 @@ onMounted(async () => {
         is_coupon.value = response.data.is_coupon
         coupon_type.value = response.data.coupon_type
         if(response.data.is_coupon == true){
-            await checkWaba()
+            //await checkWaba()
             const found = whatsapp_accounts.value.find(
                 acc => acc.id === response.data.phone_number_id
             )
             select_account.value = found || null 
-
-            console.log(select_account.value)
             selected_phone_number_id.value = select_account.value.id
             selected_waba_account.value = select_account.value.waba
             selected_phone_number.value = select_account.value.value
@@ -365,6 +385,12 @@ onMounted(async () => {
                 campaign_acc => campaign_acc.id === editCampaignId
             )
             selected_campaign.value = found_campaign || null
+            await getCouponTemplate()
+            const couponTemplateId = response.data.whatsapp_template_id   //
+            const found_coupon_template = coupon_templates.value.find(
+                coupon_template => coupon_template.id === couponTemplateId
+            )
+            select_coupon_template.value = found_coupon_template || null
         }
         const apiSections = Array.isArray(response.data.sections) ? response.data.sections : []
         // normalize + sort by order_index
@@ -381,6 +407,7 @@ onMounted(async () => {
         let message = "failed to load landing page"
         showToast(message)
     }
+    spin_loading.value = false
   }
 });
 
@@ -421,19 +448,23 @@ onMounted(async () => {
                 </div>
             </div>
             <div class="row">
-                <div class="col-md-6">
+                <div class="col-md-8">
                     <div class="row">
-                        <div class="col-md-6">
+                        <div class="col-md-3">
                             <label class="form-label" for="exampleFormControlSelect1" style="font-weight:normal;">Send coupon ?</label>
                             <v-select v-model="is_coupon" :options="is_coupon_choices" label="title" :reduce="option => option.id" @update:modelValue="checkSendCoupon"></v-select>
                         </div>
-                        <div class="col-md-6" v-if="is_coupon == true">
+                        <div class="col-md-5" v-if="is_coupon == true">
                             <label class="form-label" for="exampleFormControlSelect1" style="font-weight:normal;">Select whastapp account</label>
                             <v-select v-model="select_account" :options="whatsapp_accounts" label="value" @update:modelValue="selectAccount"></v-select>
                         </div>
+                        <div class="col-md-4" v-if="select_account">
+                            <label class="form-label" for="exampleFormControlSelect1" style="font-weight:normal;">Select message template</label>
+                            <v-select v-model="select_coupon_template" :options="coupon_templates" label="name"></v-select>
+                        </div>
                     </div>
                 </div>
-                <div class="col-md-6">
+                <div class="col-md-4">
                     <div class="row">
                         <div class="col-md-6" v-if="select_account">
                             <label class="form-label" for="exampleFormControlSelect1" style="font-weight:normal;">Select campaign</label>

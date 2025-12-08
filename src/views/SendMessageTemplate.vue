@@ -7,8 +7,8 @@ import Loading from 'vue-loading-overlay';
 import TemplateComponents from './TemplateComponents.vue'
 import 'vue-select/dist/vue-select.css';
 import 'vue-loading-overlay/dist/css/index.css';
-import { useAppOptionStore } from '@/stores/app-option';
-const appOption = useAppOptionStore();
+//import { useAppOptionStore } from '@/stores/app-option';
+//const appOption = useAppOptionStore();
 const router = useRouter()
 
 let spin_loading = ref(false)
@@ -184,12 +184,7 @@ updateTemplateComponent()
 checkProductTemplate()
 </script>
 
-<style scoped>
 
-.ps {
-  max-height: 500px; /* or height: 100px; */
-}
-</style>
 
 <template>
 	<div class="toasts-container">

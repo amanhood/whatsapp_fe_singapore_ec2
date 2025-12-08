@@ -87,7 +87,7 @@ async function handleSubmit(){
 	let payload = {}
 	payload['user_id'] = user_id
 	const title = landing_page_id.replace(/-/g, ' ')  // "My Awesome Landing Page"
-    payload['landing_page_id'] = title
+  payload['landing_page_id'] = title
 	payload['form_data'] = formData.value
 	payload['recipient'] = recipient.value
 	let response = await postWithoutTokenRequest("submitting_form",payload)
@@ -353,7 +353,7 @@ function initializeFormData() {
                   v-model.trim="recipient"
                   inputmode="numeric"
                   pattern="[0-9+\-\s()]{6,20}"
-                  placeholder="+852 6XXX XXXX"
+                  placeholder="852 6XXX XXXX"
                 />
               </div>
             </div>

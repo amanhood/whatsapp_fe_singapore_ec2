@@ -11,6 +11,7 @@ import DocsTemplate from './DocsTemplate.vue'
 import ProductsTemplate from './ProductsTemplate.vue'
 import ChoiceTemplate from './ChoiceTemplate.vue'
 import FlowTemplate from './FlowTemplate.vue'
+import CouponTemplate from './CouponTemplate.vue'
 import { Toast } from 'bootstrap';
 import { useRouter, RouterLink } from 'vue-router';
 
@@ -18,6 +19,7 @@ const router = useRouter()
 let username = ref(null)
 let token = ref(null)
 let role = ref(null)
+let user_id = ref(null)
 let template_type = ref(null)
 let template_types = [
         { id:'general_template',title: "General message template" },
@@ -25,24 +27,27 @@ let template_types = [
         { id:'document_template',title: "Document message template" },
         { id:'product_catalog',title: "Products message template" },
         { id:'choice_template',title: "Choice message template" },
-        { id:'flow_template',title: "Whatsapp flow message template" }
+        { id:'flow_template',title: "Whatsapp flow message template" },
+        { id:'coupon_template',title: "Coupon message template" }
       ]
 let whatsapp_accounts = ref([])
 let selected_waba_account = ref(null)
 let selected_phone_number_id = ref(null)
+let selected_phone_number = ref(null)
 let notification_message = ref(null)
+let landing_pages = ref([])
 
 token = sessionStorage.getItem("token")
 username = sessionStorage.getItem("username")
 role.value = sessionStorage.getItem("role")
+user_id.value = sessionStorage.getItem("id")
 
 async function checkWaba(){
   let data = await postRequest("check_waba",null,token)
   whatsapp_accounts.value = data['data']['whatsapp_accounts']
   selected_waba_account.value = whatsapp_accounts.value[0]['waba_id']
   selected_phone_number_id.value = whatsapp_accounts.value[0]['phone_number_id']
-  console.log(selected_waba_account.value)
-  console.log(selected_phone_number_id.value)
+  selected_phone_number.value = whatsapp_accounts.value[0]['phone_number']
 }
 
 function showToast(message) {
@@ -62,8 +67,20 @@ function checkLogin(){
   }
 }
 
+async function getLandingPages(){
+    let response = await getRequest("get_landing_pages",token)
+    if(response.request.status == 200){
+        landing_pages.value = response['data']['landing_pages']
+    } else {
+        let notification_message = "System error"
+        showToast(notification_message)
+    }
+}
+
+
 checkLogin()
 checkWaba()
+getLandingPages()
 
 </script>
 
@@ -98,11 +115,12 @@ checkWaba()
       </div>
     </card-body>
     <hr>
-    <create-template @showtoast="showToast" :waba_id="selected_waba_account" :phone_number_id="selected_phone_number_id" v-if="template_type && template_type.id == 'general_template'"></create-template>
+    <create-template @showtoast="showToast" :user_id="user_id" :landing_pages="landing_pages" :waba_id="selected_waba_account" :phone_number_id="selected_phone_number_id" v-if="template_type && template_type.id == 'general_template'"></create-template>
     <lto-template @showtoast="showToast" :waba_id="selected_waba_account" :phone_number_id="selected_phone_number_id" v-if="template_type && template_type.id == 'limited_time_sale'"></lto-template>
     <docs-template @showtoast="showToast" :waba_id="selected_waba_account" :phone_number_id="selected_phone_number_id" v-if="template_type && template_type.id == 'document_template'"></docs-template>
     <products-template @showtoast="showToast" :waba_id="selected_waba_account" :phone_number_id="selected_phone_number_id" v-if="template_type && template_type.id == 'product_catalog'"></products-template>
     <choice-template @showtoast="showToast" :waba_id="selected_waba_account" :phone_number_id="selected_phone_number_id" v-if="template_type && template_type.id == 'choice_template'"></choice-template>
     <flow-template @showtoast="showToast" :waba_id="selected_waba_account" :phone_number_id="selected_phone_number_id" v-if="template_type && template_type.id == 'flow_template'"></flow-template>
+    <coupon-template @showtoast="showToast" :landing_pages="landing_pages" :phone_number="selected_phone_number" :waba_id="selected_waba_account" :phone_number_id="selected_phone_number_id" v-if="template_type && template_type.id == 'coupon_template'"></coupon-template>
   </card>
 </template>

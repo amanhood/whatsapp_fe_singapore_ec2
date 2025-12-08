@@ -1,6 +1,6 @@
 <script setup>
 import { useUserSessionStore } from '@/stores/user-session';
-import { ref, watch } from 'vue'
+import { ref, watch, onMounted } from 'vue'
 import { getRequest,postRequest } from '../composables/api.js'
 import { responseMessage } from '../composables/response_message.js'
 import { fileProcess } from '../composables/file_process.js'
@@ -37,7 +37,7 @@ let submit_button_shown = ref(true)
 
 
 const emit = defineEmits(["showtoast"])
-const props = defineProps(['user_id','landing_pages','waba_id','phone_number_id'])
+const props = defineProps(['user_id','landing_pages','waba_id','phone_number_id','phone_number'])
 
 token = sessionStorage.getItem("token")
 username = sessionStorage.getItem("username")
@@ -55,15 +55,13 @@ let languages = [
       ]
 
 let button_types = [
-  { id:'quick_reply',title: "Quick reply" },
   { id:'website',title: "Website" },
   { id:'phone',title: "Phone" },
   { id:'offer',title: "Offer" }
 ]
 
 let url_options = [
-{ id:'static',title: "Static" },
-{ id:'dynamic',title: "Dynamic" }
+{ id:'static',title: "Static" }
 ]
 let selected_landing_page = ref(null)
 
@@ -115,60 +113,71 @@ function deleteButton(button_id){
     //console.log(buttons.value)
 }
 
-function addHeaderVariables(){
-    if(header_variables.value.length == 0){
-      header_variables.value.push({'id':header_variables.value.length,'value':''})
-      if(!header.value){
-        header.value = ''
-      }
-      header.value = header.value + "{{" + header_variables.value.length + "}}"
-    } else {
-      let notification_message = "Only one variable is allowed"
-      emit('showtoast',notification_message)
-    }
-
-}
-
-watch(header,(newValue,oldValue)=>{
-    if(newValue){
-      const openBrackets = (newValue.match(/\{\{/g) || []).length;
-      const closeBrackets = (newValue.match(/\}\}/g) || []).length;
-      if (openBrackets !== closeBrackets) {
-        header_warning_message.value = "This template contains variable parameters with incorrect formatting. Variable parameters must be whole numbers with two sets of curly brackets (for example, {{1}}, {{2}})."
-      } else {
-        const matches = newValue.match(/\{\{.*?\}\}/g);
-        const count = matches ? matches.length : 0;
-        if (count === 0) {
-          header_variables.value = [];
-        }
-        header_warning_message.value = null
-      }
-    }
-})
-
 function addBodyVariables(){
-    body_variables.value.push({'id':body_variables.value.length,'value':''})
-    if(!body.value){
-      body.value = ''
-    }
+    const newIndex = body_variables.value.length + 1
+
+    body_variables.value.push({
+      index: newIndex,
+      value: ""
+    })
     body.value = body.value + "{{" + body_variables.value.length + "}}"
 }
 
-watch(body,(newValue,oldValue)=>{
-    if(body.value){
-      const openBrackets = (newValue.match(/\{\{/g) || []).length;
-      const closeBrackets = (newValue.match(/\}\}/g) || []).length;
-      if (openBrackets !== closeBrackets) {
-        body_warning_message.value = "This template contains variable parameters with incorrect formatting. Variable parameters must be whole numbers with two sets of curly brackets (for example, {{1}}, {{2}})."
-      } else {
-        const matches = newValue.match(/\{\{.*?\}\}/g);
-        const count = matches ? matches.length : 0;
-        body_warning_message.value = null
-        if(body_variables.value.length > count){
-          body_variables.value.splice(-1, 1)
-        }
-      }
+watch(body, (newValue, oldValue) => {
+  if (!newValue) {
+    body_warning_message.value = null
+    return
+  }
+
+  // 1) Check brackets are balanced
+  const openBrackets = (newValue.match(/\{\{/g) || []).length
+  const closeBrackets = (newValue.match(/\}\}/g) || []).length
+
+  if (openBrackets !== closeBrackets) {
+    body_warning_message.value =
+      "This template contains variable parameters with incorrect formatting. Variable parameters must be whole numbers with two sets of curly brackets (for example, {{1}}, {{2}})."
+    return
+  }
+
+  // 2) Get all {{number}} matches
+  const matches = newValue.match(/\{\{(\d+)\}\}/g) || []
+  const indices = matches
+    .map(m => {
+      const num = m.match(/\d+/)
+      return num ? Number(num[0]) : null
+    })
+    .filter(n => n !== null)
+
+  // 3) Ensure {{1}}–{{4}} always exist
+  const baseRequired = [1, 2, 3, 4]
+  const hasAllBase = baseRequired.every(n => indices.includes(n))
+
+  if (!hasAllBase) {
+    body_warning_message.value =
+      "The first four variables {{1}}, {{2}}, {{3}} and {{4}} are required and cannot be removed."
+    return
+  }
+
+  // 4) No warning – formatting OK & 1–4 exist
+  body_warning_message.value = null
+
+  // 5) Sync extra variables (5, 6, 7...) with body_variables
+  const dynamicIndices = indices.filter(n => n > 4)
+  const desiredLength = 4 + dynamicIndices.length   // 4 fixed + extra
+
+  // Never go below 4 items
+  if (body_variables.value.length > desiredLength) {
+    // cut off extra variables but keep first 4
+    body_variables.value.splice(desiredLength)
+  } else if (body_variables.value.length < desiredLength) {
+    // add new empty variables for new placeholders
+    for (let i = body_variables.value.length + 1; i <= desiredLength; i++) {
+      body_variables.value.push({
+        id: i,
+        value: ''
+      })
     }
+  }
 })
 
 function AddUrlVariable(button_id){
@@ -183,17 +192,6 @@ function AddUrlVariable(button_id){
     }
 }
 
-async function uploadFile(event) {
-  try {
-    let data = await fileProcess(event);
-    file_type.value = data.file_type
-    file_name.value = data.file_name
-    file_length.value = data.file_length
-    uploaded_file.value = data.file// Again, assuming fileProcess is adjusted to resolve with data
-  } catch (error) {
-    console.error("Error processing file:", error);
-  }
-}
 
 function submit(){
     console.log(buttons.value)
@@ -207,52 +205,23 @@ function submit(){
       } else {
         data['waba_id'] = props.waba_id
         data['phone_number_id'] = props.phone_number_id
+        data['phone_number'] = props.phone_number
         data['template_name'] = template_name.value
         data['category'] = 'MARKETING'
         data['language'] = selected_language.value.id
         data['component'] = []
-        let file_type_format = null
-        if(uploaded_file.value){
-            let file_type_signal = file_type.value.split("/")[0]
-            if (file_type_signal == 'image'){
-              file_type_format = 'image'
-            } else if (file_type_signal == 'video') {
-              file_type_format = 'video'
-            }
-            data['component'].push({
-              "type": "header",
-              "format": file_type_format,
-              "example": {
-                "header_handle": [
-                  uploaded_file.value
-                ],
-                "file_name":file_name.value,
-                "file_length":file_length.value,
-                "file_type":file_type.value
-              }
-            })
+        if(header.value){
+          data['component'].push({
+            "type": "header",
+            "format": "text",
+            "text": header.value,
+          })
         } else {
-          if(header.value){
-            if(header_variables.value.length > 0){
-              data['component'].push({
-                "type": "header",
-                "format": "text",
-                "text": header.value,
-                "example": {
-                  "header_text": [header_variables.value[0].value]
-                }
-              })
-            } else {
-              data['component'].push({
-                "type": "header",
-                "format": "text",
-                "text": header.value,
-              })
-            }
-            
-          }
+          let message = "Please input header"
+          let notification_message = responseMessage(message)
+          emit('showtoast',notification_message)
         }
-
+        
         if(body.value){
           if(body_variables.value.length > 0){
             let variables = body_variables.value.map(item => item.value);
@@ -313,7 +282,7 @@ function submit(){
 
 async function submitForm(payload){
   spin_loading.value = true
-  let data = await postRequest("generate_generaltemplate",payload,token)
+  let data = await postRequest("generate_coupontemplate",payload,token)
   if(data.request.status == 200){
     if(data['data']['error']){
       spin_loading.value = false
@@ -328,6 +297,19 @@ async function submitForm(payload){
     spin_loading.value = false
   }
 }
+
+onMounted(()=>{
+  body_variables.value = [
+    { index: 1, value: 'code' },
+    { index: 2, value: 'title' },
+    { index: 3, value: 'content' },
+    { index: 4, value: 'url' }
+  ]
+  body.value = `{{1}}
+{{2}}
+{{3}}
+{{4}}`
+  })
 
 </script>
 
@@ -352,41 +334,17 @@ async function submitForm(payload){
     </div>
   </card-body>
   <hr>
+  
   <card-body class="pb-2">
     <div class="row">
       <div class="col-md-12">
         <div class="row" style="margin-bottom:10px;">
           <div class="flex-fill fw-bold fs-16px">Header</div>
         </div>
-        <div class="row" style="margin-bottom:20px;">
-          <div class="col-md-6" v-if="!header">
-            <input type="file" class="form-control" id="defaultFile" @change="uploadFile" accept="image/*,video/*"/>
-          </div>
-        </div>
+        
         <div class="row" style="margin-bottom:10px;">
-          <div class="col-md-6" v-if="!uploaded_file">
+          <div class="col-md-6">
             <input type="text" class="form-control" placeholder="Header title" v-model="header"/>
-          </div>
-        </div>
-
-        <div class="row" style="margin-bottom:10px;" v-if="!uploaded_file && header_warning_message">
-          <div class="col-6">
-            <card>
-              <card-body style="background-color:#FFF4F2;">
-                <p class="card-text">{{header_warning_message}}</p>
-              </card-body>
-            </card>
-          </div>
-        </div>
-
-        <div class="row" style="margin-bottom:20px;">
-          <div class="col-md-3" v-if="!uploaded_file">
-            <button type="button" class="btn btn-yellow mb-1 me-1" @click="addHeaderVariables()" v-if="!uploaded_file">+ Variables</button>
-          </div>
-        </div>
-        <div class="row" style="margin-bottom:20px;">
-          <div class="col-md-6" v-if="!uploaded_file" v-for="variable in header_variables">
-            <input type="text" class="form-control" placeholder="variables" v-model="variable.value"/>
           </div>
         </div>
 
@@ -400,6 +358,13 @@ async function submitForm(payload){
         <div class="row" style="margin-bottom:10px;">
           <div class="flex-fill fw-bold fs-16px">Body</div>
         </div>
+
+        <div class="row" style="margin-bottom:10px;">
+          <div class="col-md-6">
+            The code, title, content and website url of coupon will be inserted to the body of this template. 
+          </div>
+        </div>
+        
         <div class="row" style="margin-bottom:10px;">
           <div class="col-md-6">
             <textarea class="form-control" id="exampleFormControlTextarea1" rows="3" v-model="body" placeholder="Body {{1}} {{2}} {{3}}"></textarea>
@@ -420,8 +385,12 @@ async function submitForm(payload){
           </div>
         </div>
         <div class="row" style="margin-bottom:10px;" v-for="variable in body_variables">
+          <div class="col-auto" style="display:flex;align-items:center;">
+            <span v-text="'{{' + variable.index + '}}'"></span>
+          </div>
+
           <div class="col-md-6">
-            <input type="text" class="form-control" placeholder="variable" v-model="variable.value"/>
+            <input type="text" class="form-control" placeholder="variable" v-model="variable.value" :readonly="variable.index <= 4"/>
           </div>
         </div>
 
@@ -467,14 +436,9 @@ async function submitForm(payload){
             </div>
           </template>
           <template v-if="button.type == 'website'">
-            <div class="row" style="margin-bottom:10px">
-              <div class="col-md-6">
-                  <v-select v-model="button.url_type" :options="url_options" label="title" @update:modelValue="urltype(button.url_type,button.id)"></v-select>
-              </div>
-            </div>
-            <div class="row" v-if="button.url_type.id == 'static'">
+            <div class="row">
               <div class="row" style="margin-bottom:10px;">
-                <div class="col-md-6" v-if="landing_pages.length > 0">
+                <div class="col-md-6" v-if="props.landing_pages.length > 0">
                   <label class="form-label" for="exampleFormControlSelect1" style="font-weight:normal;">Select Landing Page</label>
                   <v-select v-model="selected_landing_page" :options="props.landing_pages" label="title" :reduce="loc => loc.title" @update:modelValue="selectLandingPage(button)"></v-select>
                 </div>
@@ -488,29 +452,6 @@ async function submitForm(payload){
                 </div>
                 <div class="col-md-3">
                   <button type="button" class="btn btn-danger mb-1 me-1" @click="deleteButton(button.id)">delete</button>
-                </div>
-              </div>
-            </div>
-            <div class="row" v-if="button.url_type.id == 'dynamic'">
-              <div class="row" style="margin-bottom:10px;">
-                <div class="col-md-6">
-                  <input type="text" class="form-control" placeholder="https://abc.com/{{1}}/" v-model="button.url"/>
-                </div>
-                <div class="col-md-3">
-                  <input type="text" class="form-control" placeholder="button text" v-model="button.text"/>
-                </div>
-                <div class="col-md-3">
-                  <button type="button" class="btn btn-danger mb-1 me-1" @click="deleteButton(button.id)">delete</button>
-                </div>
-              </div>
-              <div class="row" style="margin-bottom:10px;">
-                <div class="col-md-3">
-                  <button type="button" class="btn btn-yellow mb-1 me-1" @click="AddUrlVariable(button.id)">+ Variable</button>
-                </div>
-              </div>
-              <div class="row" style="margin-bottom:10px;">
-                <div class="col-md-6">
-                  <input type="text" class="form-control" placeholder="variable" v-model="button.variable"/>
                 </div>
               </div>
             </div>
@@ -530,11 +471,18 @@ async function submitForm(payload){
             </div>
           </template>
           <template v-if="button.type == 'offer'">
-            <div class="col-md-3">
-              <input type="text" class="form-control" placeholder="offer code" v-model="button.offer_code"/>
+            <div class="row" style="margin-bottom:10px;">
+              <div class="col-md-12">
+                The code of coupon will be inserted to this button of template
+              </div>
             </div>
-            <div class="col-md-3">
-              <button type="button" class="btn btn-danger mb-1 me-1" @click="deleteButton(button.id)">delete</button>
+            <div class="row">
+              <div class="col-md-3">
+                <input type="text" class="form-control" placeholder="offer code" v-model="button.offer_code"/>
+              </div>
+              <div class="col-md-3">
+                <button type="button" class="btn btn-danger mb-1 me-1" @click="deleteButton(button.id)">delete</button>
+              </div>
             </div>
           </template>
           <hr style="margin-top:20px;">

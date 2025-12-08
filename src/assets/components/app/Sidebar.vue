@@ -313,24 +313,9 @@ onMounted(() => {
 });
 </script>
 
-<style>
-.app-sidebar {
-  height: 100vh;
-  display: flex;
-  flex-direction: column;
-  overflow: hidden;
-}
-
-.app-sidebar-content {
-  flex: 1;
-  min-height: 0;
-  overflow: auto;
-}
-</style>
-
 <template>
     <div id="sidebar" class="app-sidebar h-screen flex flex-col overflow-hidden">
-        <perfect-scrollbar class="app-sidebar-content flex-1 overflow-hidden">
+        <perfect-scrollbar class="app-sidebar-content">
             <div class="menu flex flex-col grow">
                 <template v-for="menu in menuItems">
                     <div class="menu-header" v-if="menu.is_header">{{ menu.text }}</div>
@@ -345,4 +330,3 @@ onMounted(() => {
         <button class="app-sidebar-mobile-backdrop" v-on:click="appSidebarMobileToggled"></button>
     </div>
 </template>
-git token. Press Tab to insert.

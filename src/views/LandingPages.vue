@@ -6,8 +6,8 @@ import { Toast } from 'bootstrap';
 import { useRouter, RouterLink } from 'vue-router';
 import 'vue-select/dist/vue-select.css';
 import moment from 'moment';
-
-
+import { useAppOptionStore } from '@/stores/app-option';
+const appOption = useAppOptionStore();
 const router = useRouter()
 let username = ref(null)
 let token = ref(null)
@@ -66,9 +66,20 @@ function showLandingPage(user_id,landing_page_id){
     router.push('/page/landing-page/'+user_id + '/' + landing_page_id);
 }
 
+function checkCoupon(is_coupon){
+
+  if(is_coupon){
+    return "Send"
+  } else {
+    return "Not sending"
+  }
+}
+
 onMounted(() => {
   checkLogin();
   getLandingPages();
+  appOption.appSidebarHide = false;
+	appOption.appHeaderHide = false;
 });
 
 </script>
@@ -113,6 +124,8 @@ onMounted(() => {
 						<thead>
 							<tr>
 								<th class="border-top-0 pt-0 pb-2">Title</th>
+                <th class="border-top-0 pt-0 pb-2">Send coupon after submission ?</th>
+                <th class="border-top-0 pt-0 pb-2">Campaign name</th>
 								<th class="border-top-0 pt-0 pb-2">Show</th>
 								<th class="border-top-0 pt-0 pb-2">Edit</th>
 							</tr>
@@ -120,6 +133,8 @@ onMounted(() => {
 						<tbody>
 							<tr v-for="landing_page in landing_pages">         
                   <td class="align-middle">{{landing_page.title }}</td>
+                  <td class="align-middle">{{checkCoupon(landing_page.is_coupon)}}</td>
+                  <td class="align-middle">{{landing_page.campaign }}</td>
                   <td class="align-middle"><button type="button" class="btn btn-yellow mb-1 me-1" @click="showLandingPage(user_id, getSlug(landing_page.title))">Show</button></td>
                   <td class="align-middle"><button type="button" class="btn btn-warning mb-1 me-1" @click="editLandingPage(landing_page.id)">Edit</button></td>
               </tr>
