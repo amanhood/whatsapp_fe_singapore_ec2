@@ -114,7 +114,7 @@ function connectToSockets() {
         const groupKey = `${phone_number_id}_${recipient_id}`
 
         if (socketMap.has(groupKey)) continue // Already connected
-        const ws = new WebSocket(`wss://biz-api.com/ws/notifications/${phone_number_id}/${recipient_id}/`)
+        const ws = new WebSocket(`wss://biz-api.com/ws/notifications/${phone_number_id}/`)
         ws.onopen = () => {
             console.log(`✅ Connected to WS for ${groupKey}`)
         }

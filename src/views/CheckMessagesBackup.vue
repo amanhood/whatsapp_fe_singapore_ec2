@@ -180,10 +180,10 @@ function connectToSockets() {
   for (const contact of displayContacts.value) {
     const recipient_id = contact.direction === 'in' ? contact.from_number : contact.to_number
     const phone_number_id = selected_phone_number_id.value
-    const groupKey = `${phone_number_id}_${recipient_id}`
+    const groupKey = `${phone_number_id}`
 
     if (socketMap.has(groupKey)) continue
-    const ws = new WebSocket(`wss://biz-api.com/ws/notifications/${phone_number_id}/${recipient_id}/`)
+    const ws = new WebSocket(`wss://biz-api.com/ws/notifications/${phone_number_id}/`)
     ws.onopen = () => console.log(`✅ Connected to WS for ${groupKey}`)
     ws.onmessage = (event) => {
       const data = JSON.parse(event.data)
