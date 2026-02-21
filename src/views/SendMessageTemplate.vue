@@ -83,24 +83,29 @@ function showToast(message) {
 }
 
 function checkProductTemplate(){
-  template.components.forEach((sitem, i) => {
-    if(sitem.type == "LIMITED_TIME_OFFER"){
-      template_type.value = "limited_time_offer"
-    } else if (sitem.type == "BUTTONS"){
-      sitem.buttons.forEach((titem, i) => {
-        if(titem.type == "CATALOG"){
-          template_type.value = "all_products"
-        } else if (titem.type == "MPM"){
-          template_type.value = "specific_products"
-        } else if (titem.type == "FLOW"){
-          template_type.value = "whatsapp_flow"
-        }
-      });
-      console.log(template.components)
-    } else {
-      template_type.value = "non_product"
-    }
-  });
+  if (template.category == 'UTILITY'){
+    template_type.value = 'utility'
+  } else {
+    template.components.forEach((sitem, i) => {
+      if(sitem.type == "LIMITED_TIME_OFFER"){
+        template_type.value = "limited_time_offer"
+      } else if (sitem.type == "BUTTONS"){
+        sitem.buttons.forEach((titem, i) => {
+          if(titem.type == "CATALOG"){
+            template_type.value = "all_products"
+          } else if (titem.type == "MPM"){
+            template_type.value = "specific_products"
+          } else if (titem.type == "FLOW"){
+            template_type.value = "whatsapp_flow"
+          }
+        });
+        console.log(template.components)
+      } else {
+        template_type.value = "non_product"
+      }
+    });
+  }
+  
 }
 
 async function get_business_account(){

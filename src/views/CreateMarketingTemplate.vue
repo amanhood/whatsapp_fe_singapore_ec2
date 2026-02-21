@@ -12,6 +12,7 @@ import ProductsTemplate from './ProductsTemplate.vue'
 import ChoiceTemplate from './ChoiceTemplate.vue'
 import FlowTemplate from './FlowTemplate.vue'
 import CouponTemplate from './CouponTemplate.vue'
+import BookingConfirmationTemplate from './BookingConfirmationTemplate.vue'
 import { Toast } from 'bootstrap';
 import { useRouter, RouterLink } from 'vue-router';
 
@@ -28,7 +29,8 @@ let template_types = [
         { id:'product_catalog',title: "Products message template" },
         { id:'choice_template',title: "Choice message template" },
         { id:'flow_template',title: "Whatsapp flow message template" },
-        { id:'coupon_template',title: "Coupon message template" }
+        { id:'coupon_template',title: "Coupon message template" },
+        { id:'booking_confirmation_template',title: "Booking confirmation" }
       ]
 let whatsapp_accounts = ref([])
 let selected_waba_account = ref(null)
@@ -122,5 +124,6 @@ getLandingPages()
     <choice-template @showtoast="showToast" :waba_id="selected_waba_account" :phone_number_id="selected_phone_number_id" v-if="template_type && template_type.id == 'choice_template'"></choice-template>
     <flow-template @showtoast="showToast" :waba_id="selected_waba_account" :phone_number_id="selected_phone_number_id" v-if="template_type && template_type.id == 'flow_template'"></flow-template>
     <coupon-template @showtoast="showToast" :landing_pages="landing_pages" :phone_number="selected_phone_number" :waba_id="selected_waba_account" :phone_number_id="selected_phone_number_id" v-if="template_type && template_type.id == 'coupon_template'"></coupon-template>
+    <booking-confirmation-template @showtoast="showToast" :landing_pages="landing_pages" :phone_number="selected_phone_number" :waba_id="selected_waba_account" :phone_number_id="selected_phone_number_id" v-if="template_type && template_type.id == 'booking_confirmation_template'"></booking-confirmation-template>
   </card>
 </template>

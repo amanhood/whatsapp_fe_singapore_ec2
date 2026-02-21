@@ -293,6 +293,8 @@ async function sendMultiple(){
             // check any variable at header ?
             if (item.example && 'header_text' in item.example) {
               // check any header text is provided at excel
+              // change number to string for header
+              data.header_01 = data.header_01.toString()
               if (typeof data.header_01 === 'string' && data.header_01.trim() !== ''){
                 message['header_text'] = data.header_01
               } else {
