@@ -123,111 +123,65 @@ function submit(){
     let re_variables = null
     let url_re_variables = null
     if(body.value){
-      re_variables = body.value.match(re)
+        re_variables = body.value.match(re)
     }
     if(url.value){
-      url_re_variables = url.value.match(re)
+        url_re_variables = url.value.match(re)
     }
     if(re_variables && re_variables.length != body_variables.value.length){
-      let notification_message = ""
-      notification_message = "Unmatched body variables, you have " + re_variables.length + " variables. But got "  + body_variables.value.length + " variables at body"
-      emit('showtoast',notification_message)
+        let notification_message = ""
+        notification_message = "Unmatched body variables, you have " + re_variables.length + " variables. But got "  + body_variables.value.length + " variables at body"
+        emit('showtoast',notification_message)
     } else if(url_re_variables && url_re_variables.length != url_variables.value.length){
-      let notification_message = ""
-      notification_message = "Unmatch url variables, you have " + url_re_variables.length + " variables at url. But got "  + url_variables.value.length + "variables at url"
-      emit('showtoast',notification_message)
+        let notification_message = ""
+        notification_message = "Unmatch url variables, you have " + url_re_variables.length + " variables at url. But got "  + url_variables.value.length + "variables at url"
+        emit('showtoast',notification_message)
     } else {
-      let variables = body_variables.value.map(item => item.value)
-      console.log(url_variables)
-      console.log(url_variables.value.length)
-      if(url_variables.value.length > 0){
-          data['waba_id'] = props.waba_id
-          data['phone_number_id'] = props.phone_number_id
-          data['name'] = template_name.value
-          data['language'] = selected_language.value.id
-          data['category'] = 'UTILITY'
-          data['component'] = [
-            {
-              "type": "header",
-              "format": "DOCUMENT",
-              "example": {
-                "header_handle": [
-                  uploaded_file.value
-                ],
-                "file_name":file_name.value,
-                "file_length":file_length.value,
-                "file_type":file_type.value
-              }
-            },
-            {
-              "type": "body",
-              "text": body.value,
-              "example": {
-                "body_text": variables
-              }
-            }
-            //{
-            //  "type": "buttons",
-            //  "buttons": [
-            //    {
-            //      "type": "PHONE_NUMBER",
-            //      "text": phone_text.value,
-            //      "phone_number": country.value + phone_number.value
-            //    },
-            //    {
-            //      "type": "url",
-            //      "text": url_text.value,
-            //      "url": url.value,
-            //      "example": url_variables.value[0].value
-            //    }
-            //  ]
-            //}
-          ]
-          submitForm(data)
+        let variables = body_variables.value.map(item => item.value)
+        data['waba_id'] = props.waba_id
+        data['phone_number_id'] = props.phone_number_id
+        data['name'] = template_name.value
+        data['language'] = selected_language.value.id
+        data['category'] = 'UTILITY'
+        let file_format = null
+        if(file_type.value == 'application/pdf'){
+          file_format = 'DOCUMENT'
         } else {
-          data['waba_id'] = props.waba_id
-          data['phone_number_id'] = props.phone_number_id
-          data['name'] = template_name.value
-          data['language'] = selected_language.value.id
-          data['category'] = 'UTILITY'
-          data['component'] = [
-            {
-              "type": "header",
-              "format": "DOCUMENT",
-              "example": {
-                "header_handle": [
-                  uploaded_file.value
-                ],
-                "file_name":file_name.value,
-                "file_length":file_length.value,
-                "file_type":file_type.value
-              }
-            },
-            {
-              "type": "body",
-              "text": body.value,
-              "example": {
-                "body_text": variables
-              }
-            }
-            // {
-            //   "type": "buttons",
-            //   "buttons": [
-            //     {
-            //       "type": "PHONE_NUMBER",
-            //       "text": phone_text.value,
-            //       "phone_number": country.value + phone_number.value
-            //     },
-            //     {
-            //       "type": "url",
-            //       "text": url_text.value,
-            //       "url": url.value
-            //     }
-            //   ]
-            // }
-          ]
-          submitForm(data)
+          file_format = 'IMAGE'
         }
+        data['component'] = [
+          {
+              "type": "header",
+              "format": file_format,
+              "example": {
+              "header_handle": [
+                  uploaded_file.value
+              ],
+              "file_name":file_name.value,
+              "file_length":file_length.value,
+              "file_type":file_type.value
+              }
+          }
+        ]
+        if(variables.length > 0){
+          data['component'].push(
+            {
+                "type": "body",
+                "text": body.value,
+                "example": {
+                "body_text": variables
+                }
+            }
+          )
+        } else {
+          data['component'].push(
+            {
+                "type": "body",
+                "text": body.value
+            }
+          )
+        }
+        submitForm(data)
     }
 }
 
@@ -284,7 +238,7 @@ async function submitForm(payload){
         </div>
         <div class="row" style="margin-bottom:20px;">
           <div class="col-md-6">
-            <input type="file" class="form-control" id="defaultFile" @change="uploadFile" accept="application/pdf"/>
+            <input type="file" class="form-control" id="defaultFile" @change="uploadFile" accept="image/png,image/jpeg,image/webp,application/pdf"/>
           </div>
         </div>
       </div>
@@ -325,64 +279,7 @@ async function submitForm(payload){
     </div>
   </card-body>
   <hr>
-  <!-- <card-body class="pb-2">
-    <div class="row">
-      <div class="col-md-12">
-        <div class="row" style="margin-bottom:10px;">
-          <div class="flex-fill fw-bold fs-16px">Phone Button</div>
-        </div>
-        <div class="row" style="margin-bottom:20px;">
-          <div class="col-md-3">
-            <input type="text" class="form-control" placeholder="text" v-model="phone_text"/>
-          </div>
-          <div class="col-md-3">
-            <input type="text" class="form-control" placeholder="country code (e.g: +852)" v-model="country"/>
-          </div>
-          <div class="col-md-3">
-            <input type="text" class="form-control" placeholder="phone number" v-model="phone_number"/>
-          </div>
-        </div>
-      </div>
-    </div>
-  </card-body>
-  <hr> -->
-  <!-- <card-body class="pb-2">
-    <div class="row">
-      <div class="col-md-12">
-        <div class="row" style="margin-bottom:10px;">
-          <div class="flex-fill fw-bold fs-16px">Website Link Button</div>
-        </div>
-        <div class="row" style="margin-bottom:10px;">
-          <div class="col-md-6">
-            <input type="text" class="form-control" placeholder="https://abc.com/{{1}}/" v-model="url"/>
-          </div>
-          <div class="col-md-3">
-            <input type="text" class="form-control" placeholder="button text" v-model="url_text"/>
-          </div>
-        </div>
-        <div class="row" style="margin-bottom:10px;" v-if="url_warning_message">
-          <div class="col-6">
-            <card>
-              <card-body style="background-color:#FFF4F2;">
-                <p class="card-text">{{url_warning_message}}</p>
-              </card-body>
-            </card>
-          </div>
-        </div>
-        <div class="row" style="margin-bottom:10px;">
-          <div class="col-md-3">
-            <button type="button" class="btn btn-yellow mb-1 me-1" @click="addUrlVariables()">+ Variables</button>
-          </div>
-        </div>
-        <div class="row" style="margin-bottom:10px;" v-for="variable in url_variables">
-          <div class="col-md-6">
-            <input type="text" class="form-control" placeholder="variable" v-model="variable.value"/>
-          </div>
-        </div>
-      </div>
-    </div>
-  </card-body> -->
-  <hr>
+  
   <card-body class="pb-2">
     <div class="row">
       <div class="col-md-12">

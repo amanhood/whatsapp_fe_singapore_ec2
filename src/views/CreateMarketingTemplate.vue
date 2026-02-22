@@ -13,6 +13,9 @@ import ChoiceTemplate from './ChoiceTemplate.vue'
 import FlowTemplate from './FlowTemplate.vue'
 import CouponTemplate from './CouponTemplate.vue'
 import BookingConfirmationTemplate from './BookingConfirmationTemplate.vue'
+import AppointmentReminderTemplate from './AppointmentReminderTemplate.vue'
+import AppointmentRescheduleTemplate from './AppointmentRescheduleTemplate.vue'
+import AppointmentCancellationTemplate from './AppointmentCancellationTemplate.vue'
 import { Toast } from 'bootstrap';
 import { useRouter, RouterLink } from 'vue-router';
 
@@ -25,12 +28,15 @@ let template_type = ref(null)
 let template_types = [
         { id:'general_template',title: "General message template" },
         { id:'limited_time_sale',title: "Special sales message template" },
-        { id:'document_template',title: "Document message template" },
         { id:'product_catalog',title: "Products message template" },
         { id:'choice_template',title: "Choice message template" },
         { id:'flow_template',title: "Whatsapp flow message template" },
         { id:'coupon_template',title: "Coupon message template" },
-        { id:'booking_confirmation_template',title: "Booking confirmation" }
+        { id:'document_template',title: "Download document / Qrcode template" },
+        { id:'booking_confirmation_template',title: "Booking confirmation template" },
+        { id:'appointment_reminder_template',title: "Class / Appointment reminder template" },
+        { id:'appointment_reschedule_template',title: "Class / Appointment reschedule template" },
+        { id:'appointment_cancellation_template',title: "Class / Appointment cancellation template" }
       ]
 let whatsapp_accounts = ref([])
 let selected_waba_account = ref(null)
@@ -125,5 +131,8 @@ getLandingPages()
     <flow-template @showtoast="showToast" :waba_id="selected_waba_account" :phone_number_id="selected_phone_number_id" v-if="template_type && template_type.id == 'flow_template'"></flow-template>
     <coupon-template @showtoast="showToast" :landing_pages="landing_pages" :phone_number="selected_phone_number" :waba_id="selected_waba_account" :phone_number_id="selected_phone_number_id" v-if="template_type && template_type.id == 'coupon_template'"></coupon-template>
     <booking-confirmation-template @showtoast="showToast" :landing_pages="landing_pages" :phone_number="selected_phone_number" :waba_id="selected_waba_account" :phone_number_id="selected_phone_number_id" v-if="template_type && template_type.id == 'booking_confirmation_template'"></booking-confirmation-template>
+    <appointment-reminder-template @showtoast="showToast" :landing_pages="landing_pages" :phone_number="selected_phone_number" :waba_id="selected_waba_account" :phone_number_id="selected_phone_number_id" v-if="template_type && template_type.id == 'appointment_reminder_template'"></appointment-reminder-template>
+    <appointment-reschedule-template @showtoast="showToast" :landing_pages="landing_pages" :phone_number="selected_phone_number" :waba_id="selected_waba_account" :phone_number_id="selected_phone_number_id" v-if="template_type && template_type.id == 'appointment_reschedule_template'"></appointment-reschedule-template>
+    <appointment-cancellation-template @showtoast="showToast" :landing_pages="landing_pages" :phone_number="selected_phone_number" :waba_id="selected_waba_account" :phone_number_id="selected_phone_number_id" v-if="template_type && template_type.id == 'appointment_cancellation_template'"></appointment-cancellation-template>
   </card>
 </template>
