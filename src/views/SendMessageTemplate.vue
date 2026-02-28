@@ -85,6 +85,8 @@ function showToast(message) {
 function checkProductTemplate(){
   if (template.category == 'UTILITY'){
     template_type.value = 'utility'
+  } else if (template.category == 'AUTHENTICATION'){
+    template_type.value = 'authentication'
   } else {
     template.components.forEach((sitem, i) => {
       if(sitem.type == "LIMITED_TIME_OFFER"){
@@ -270,6 +272,10 @@ checkProductTemplate()
     </fragment>
 
     <fragment v-if="template_category == 'UTILITY'">
+      <template-components :template_name="template_name" :component="template_components" :template_category="template_category" @showtoast="showToast" :waba_id="selected_waba_account" :phone_number_id="selected_phone_number_id" :template_type="template_type" :business_account_id="business_account_id" :products="products"></template-components>
+    </fragment>
+
+    <fragment v-if="template_category == 'AUTHENTICATION'">
       <template-components :template_name="template_name" :component="template_components" :template_category="template_category" @showtoast="showToast" :waba_id="selected_waba_account" :phone_number_id="selected_phone_number_id" :template_type="template_type" :business_account_id="business_account_id" :products="products"></template-components>
     </fragment>
 

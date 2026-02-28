@@ -143,6 +143,9 @@ async function preview(){
     if(props.template_category == 'UTILITY'){
         payload['template_type'] = 'utility'
     }
+    if(props.template_category == 'AUTHENTICATION'){
+        payload['template_type'] = 'authentication'
+    }
     payload['uploaded_file'] = uploaded_file.value
     payload['file_name'] = file_name.value
     payload['file_type'] = file_type.value
@@ -366,7 +369,7 @@ function getComponentName(item){
     return "Footer";
   } else if (item == 'BUTTONS'){
     return "Buttons";
-  }
+  } 
 }
 
 function uploadExcel(event) {
@@ -828,7 +831,7 @@ updateBodyVariables()
 
   <card-body v-for="tc in props.component">
     <div class="row" id="row_margin">
-      <div class="flex-fill fw-bold fs-16px">{{getComponentName(tc.type)}}</div>
+      <div class="flex-fill fw-bold fs-16px" v-if="props.template_type != 'authentication'">{{getComponentName(tc.type)}}</div>
     </div>
     <template v-if="tc.type == 'HEADER'">
       <fragment v-if="tc.format == 'IMAGE' || tc.format == 'VIDEO' && tc.example">
@@ -967,7 +970,7 @@ updateBodyVariables()
       </div>
     </template>
 
-    <template v-if="tc.type == 'BUTTONS'">
+    <template v-if="tc.type == 'BUTTONS' && props.template_type != 'authentication'">
       <div class="row" v-for="button in tc.buttons">
         <template v-if="button.type == 'COPY_CODE'">
           <div class="row">
@@ -1189,7 +1192,7 @@ updateBodyVariables()
   </card-body>
   <hr>
 
-  <card-body>
+  <card-body v-if="props.template_type != 'authentication'">
     <div class="row" id="row_margin">
       <div class="flex-fill fw-bold fs-16px">Download sending message template</div>
     </div>
@@ -1232,7 +1235,7 @@ updateBodyVariables()
     </div>
   </card-body>
 
-  <card-body>
+  <card-body v-if="props.template_type != 'authentication'">
     <div class="row" id="row_margin">
       <div class="flex-fill fw-bold fs-16px">Send to multiple recipients</div>
     </div>

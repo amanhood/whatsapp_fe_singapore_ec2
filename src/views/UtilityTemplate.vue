@@ -67,70 +67,28 @@ function addHeaderVariables(){
 }
 
 function addBodyVariables(){
-    const newIndex = body_variables.value.length + 1
-
-    body_variables.value.push({
-      index: newIndex,
-      value: ""
-    })
+    body_variables.value.push({'id':body_variables.value.length,'value':''})
+    if(!body.value){
+      body.value = ''
+    }
     body.value = body.value + "{{" + body_variables.value.length + "}}"
 }
 
-watch(body, (newValue, oldValue) => {
-  if (!newValue) {
-    body_warning_message.value = null
-    return
-  }
-
-  // 1) Check brackets are balanced
-  const openBrackets = (newValue.match(/\{\{/g) || []).length
-  const closeBrackets = (newValue.match(/\}\}/g) || []).length
-
-  if (openBrackets !== closeBrackets) {
-    body_warning_message.value =
-      "This template contains variable parameters with incorrect formatting. Variable parameters must be whole numbers with two sets of curly brackets (for example, {{1}}, {{2}})."
-    return
-  }
-
-  // 2) Get all {{number}} matches
-  const matches = newValue.match(/\{\{(\d+)\}\}/g) || []
-  const indices = matches
-    .map(m => {
-      const num = m.match(/\d+/)
-      return num ? Number(num[0]) : null
-    })
-    .filter(n => n !== null)
-
-  // 3) Ensure {{1}}–{{4}} always exist
-  const baseRequired = [1, 2, 3, 4]
-  const hasAllBase = baseRequired.every(n => indices.includes(n))
-
-  if (!hasAllBase) {
-    body_warning_message.value =
-      "The first six variables {{1}}, {{2}}, {{3}}, {{4}} are required and cannot be removed."
-    return
-  }
-
-  // 4) No warning – formatting OK & 1–4 exist
-  body_warning_message.value = null
-
-  // 5) Sync extra variables (5, 6, 7...) with body_variables
-  const dynamicIndices = indices.filter(n => n > 4)
-  const desiredLength = 4 + dynamicIndices.length   // 4 fixed + extra
-
-  // Never go below 4 items
-  if (body_variables.value.length > desiredLength) {
-    // cut off extra variables but keep first 4
-    body_variables.value.splice(desiredLength)
-  } else if (body_variables.value.length < desiredLength) {
-    // add new empty variables for new placeholders
-    for (let i = body_variables.value.length + 1; i <= desiredLength; i++) {
-      body_variables.value.push({
-        id: i,
-        value: ''
-      })
+watch(body,(newValue,oldValue)=>{
+    if(body.value){
+      const openBrackets = (newValue.match(/\{\{/g) || []).length;
+      const closeBrackets = (newValue.match(/\}\}/g) || []).length;
+      if (openBrackets !== closeBrackets) {
+        body_warning_message.value = "This template contains variable parameters with incorrect formatting. Variable parameters must be whole numbers with two sets of curly brackets (for example, {{1}}, {{2}})."
+      } else {
+        const matches = newValue.match(/\{\{.*?\}\}/g);
+        const count = matches ? matches.length : 0;
+        body_warning_message.value = null
+        if(body_variables.value.length > count){
+          body_variables.value.splice(-1, 1)
+        }
+      }
     }
-  }
 })
 
 
@@ -189,15 +147,25 @@ function submit(){
             })
         }
       }
-      data['component'].push(
-        {
+
+    if(body.value){
+        if(body_variables.value.length > 0){
+        let variables = body_variables.value.map(item => item.value);
+        data['component'].push({
             "type": "body",
             "text": body.value,
             "example": {
             "body_text": variables
             }
+        })
+        } else {
+        data['component'].push({
+            "type": "body",
+            "text": body.value
+        })
         }
-      )
+        
+    }
       if(buttons.value.length > 0){
         let buttons_components = []
         buttons.value.forEach((item) => {
@@ -244,25 +212,7 @@ async function submitForm(payload){
   }
 }
 
-onMounted(()=>{
-  body_variables.value = [
-    { index: 1, value: 'name' },
-    { index: 2, value: 'class' },
-    { index: 3, value: 'date' },
-    { index: 4, value: 'time' }
-    // { index: 5, value: 'location' },
-    // { index: 6, value: 'phone' }
-  ]
-  body.value = `Hello, it is the confirmation of your booking, please check with below information. 
-
-Name: {{1}}
-Class: {{2}}
-Date: {{3}}
-Time: {{4}}
-Thank you`
-  })
-
-  function selectButton(){
+function selectButton(){
     if(buttons.value.length < 3){
       if(selected_button_type.value.id == "quick_reply"){
         custom_button_shown.value = true
