@@ -30,6 +30,7 @@ const fullMenu = [
     { is_divider: true },
     { text: 'Whatsapp and Business Account', is_header: true },
     { url: '/page/connect-whatsapp', icon: 'fa fa-cog', text: 'Connect whatsapp' },
+    { url: '/page/co-existence', icon: 'fa fa-cog', text: 'Co-existence' },
     { url: '/page/connect-business-account', icon: 'fa fa-cog', text: 'Connect business' },
     { is_divider: true },
     { text: 'Customer Messages', is_header: true },

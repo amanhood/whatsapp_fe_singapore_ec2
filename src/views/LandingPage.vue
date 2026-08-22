@@ -45,8 +45,9 @@ async function getLandingPageDetail(){
     payload['landing_page_id'] = title
 	let response = await postWithoutTokenRequest("get_landing_page",payload)
 	if(response['status'] == 200){
+    console.log(response)
 		page_title.value = response['data']['title']
-        content.value = response['data']['content']
+    content.value = response['data']['content']
 		if(response['data']['sections'].length > 0){
 			sections.value = response['data']['sections']
 		}
@@ -338,27 +339,29 @@ function initializeFormData() {
         </card-body>
 
         <!-- Recipient -->
-        <div class="section-divider"><span>Recipient information</span></div>
-        <card-body>
-          <div class="row g-4 align-items-end">
-            <div class="col-12 col-md-6">
-              <label class="form-label form-label-sm">Phone number</label>
-              <div class="input-group input-group-lg">
-                <span class="input-group-text">
-                  <i class="bi bi-telephone"></i>
-                </span>
-                <input
-                  type="tel"
-                  class="form-control"
-                  v-model.trim="recipient"
-                  inputmode="numeric"
-                  pattern="[0-9+\-\s()]{6,20}"
-                  placeholder="852 6XXX XXXX"
-                />
+        <fragment v-if="sections.length > 0">
+          <div class="section-divider"><span>Recipient information</span></div>
+          <card-body>
+            <div class="row g-4 align-items-end">
+              <div class="col-12 col-md-6">
+                <label class="form-label form-label-sm">Phone number</label>
+                <div class="input-group input-group-lg">
+                  <span class="input-group-text">
+                    <i class="bi bi-telephone"></i>
+                  </span>
+                  <input
+                    type="tel"
+                    class="form-control"
+                    v-model.trim="recipient"
+                    inputmode="numeric"
+                    pattern="[0-9+\-\s()]{6,20}"
+                    placeholder="852 6XXX XXXX"
+                  />
+                </div>
               </div>
             </div>
-          </div>
-        </card-body>
+          </card-body>
+        </fragment>
 
         <!-- Dynamic Sections -->
         <form @submit.prevent="handleSubmit">
@@ -475,12 +478,15 @@ function initializeFormData() {
           </div>
 
           <!-- Submit -->
-          <div class="section-divider"></div>
-          <card-body class="text-center pb-5">
-            <button type="submit" class="btn btn-danger btn-lg px-5">
-              <i class="bi bi-check2-circle me-2"></i> Submit
-            </button>
-          </card-body>
+          <fragment v-if="sections.length > 0">
+            <div class="section-divider"></div>
+            <card-body class="text-center pb-5">
+              <button type="submit" class="btn btn-danger btn-lg px-5">
+                <i class="bi bi-check2-circle me-2"></i> Submit
+              </button>
+            </card-body>
+          </fragment>
+          
         </form>
       </card>
     </div>

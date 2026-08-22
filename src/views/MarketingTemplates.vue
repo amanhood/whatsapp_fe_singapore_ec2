@@ -4,6 +4,7 @@ import { ref } from 'vue'
 import { getRequest,postRequest,deleteRequest } from '../composables/api.js'
 import { Toast } from 'bootstrap';
 import { useRouter, RouterLink } from 'vue-router';
+import 'vue-select/dist/vue-select.css';
 
 const userSession = useUserSessionStore();
 const router = useRouter()
@@ -31,6 +32,7 @@ let notification_message = ref(null)
 let whatsapp_accounts = ref([])
 let selected_waba_account = ref(null)
 let selected_phone_number_id = ref(null)
+let selected_phone_number = ref(null)
 //token = userSession.token
 //username = userSession.username
 //console.log(userSession.token)
@@ -41,10 +43,30 @@ role.value = sessionStorage.getItem("role")
 
 async function checkWaba(){
   let data = await postRequest("check_waba",null,token)
-  whatsapp_accounts.value = data['data']['whatsapp_accounts']
-  selected_waba_account.value = whatsapp_accounts.value[0]['waba_id']
-  selected_phone_number_id.value = whatsapp_accounts.value[0]['phone_number_id']
+  whatsapp_accounts.value = data['data']['whatsapp_accounts'].map(account => ({
+    ...account,
+    title: `${account.phone_number} (${account.waba_id})`
+  }))
+  //whatsapp_accounts.value = data['data']['whatsapp_accounts']
+  // selected_waba_account.value = whatsapp_accounts.value[0]['waba_id']
+  // selected_phone_number_id.value = whatsapp_accounts.value[0]['phone_number_id']
+  // getTemplates(selected_waba_account.value,selected_phone_number_id.value)
+}
+
+function onWhatsappAccountChange(account) {
+  if (!account) {
+    selected_waba_account.value = null
+    selected_phone_number_id.value = null
+    selected_phone_number.value = null
+    return
+  }
+  console.log(account)
+
+  selected_waba_account.value = account.waba_id
+  selected_phone_number_id.value = account.phone_number_id
+  selected_phone_number.value = account.phone_number
   getTemplates(selected_waba_account.value,selected_phone_number_id.value)
+  //console.log(selected_waba_account.value,selected_phone_number_id.value,selected_phone_number.value )
 }
 
 
@@ -145,6 +167,30 @@ checkWaba()
 
 <template>
 	<card>
+    <card-body class="pb-2">
+      <div class="row">
+        <div class="col-md-12">
+
+          <div class="row" style="margin-bottom:10px;">
+            <div class="flex-fill fw-bold fs-16px">
+              WhatsApp Account
+            </div>
+          </div>
+          <div class="row">
+            <div class="col-md-6">
+              <v-select
+                v-model="selected_whatsapp_account"
+                :options="whatsapp_accounts"
+                label="title"
+                placeholder="Select WhatsApp Account"
+                @update:modelValue="onWhatsappAccountChange"
+              />
+            </div>
+          </div>
+        </div>
+      </div>
+    </card-body>
+    <hr>
 		<div class="tab-content p-4" >
 			<div class="tab-pane fade show active" id="allTab">
 				<div class="row">
@@ -175,6 +221,7 @@ checkWaba()
 					<table class="table table-hover text-nowrap">
 						<thead>
 							<tr>
+                <th class="border-top-0 pt-0 pb-2">ID</th>
 								<th class="border-top-0 pt-0 pb-2">template name</th>
 								<th class="border-top-0 pt-0 pb-2">category</th>
 								<th class="border-top-0 pt-0 pb-2">langauge</th>
@@ -185,6 +232,7 @@ checkWaba()
 						</thead>
 						<tbody>
 							<tr v-for="template in templates">         
+                <td class="align-middle">{{template.id}}</td>
                 <td class="align-middle">{{template.name}}</td>
                 <td class="align-middle">{{template.category}}</td>
                 <td class="align-middle">{{template.language}}</td>

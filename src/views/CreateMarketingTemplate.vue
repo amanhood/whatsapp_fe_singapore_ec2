@@ -48,6 +48,7 @@ let selected_phone_number_id = ref(null)
 let selected_phone_number = ref(null)
 let notification_message = ref(null)
 let landing_pages = ref([])
+const selected_whatsapp_account = ref(null)
 
 token = sessionStorage.getItem("token")
 username = sessionStorage.getItem("username")
@@ -56,10 +57,15 @@ user_id.value = sessionStorage.getItem("id")
 
 async function checkWaba(){
   let data = await postRequest("check_waba",null,token)
-  whatsapp_accounts.value = data['data']['whatsapp_accounts']
-  selected_waba_account.value = whatsapp_accounts.value[0]['waba_id']
-  selected_phone_number_id.value = whatsapp_accounts.value[0]['phone_number_id']
-  selected_phone_number.value = whatsapp_accounts.value[0]['phone_number']
+  whatsapp_accounts.value = data['data']['whatsapp_accounts'].map(account => ({
+    ...account,
+    title: `${account.phone_number} (${account.waba_id})`
+  }))
+
+  //whatsapp_accounts.value = data['data']['whatsapp_accounts']
+  // selected_waba_account.value = whatsapp_accounts.value[0]['waba_id']
+  // selected_phone_number_id.value = whatsapp_accounts.value[0]['phone_number_id']
+  // selected_phone_number.value = whatsapp_accounts.value[0]['phone_number']
 }
 
 function showToast(message) {
@@ -89,6 +95,22 @@ async function getLandingPages(){
     }
 }
 
+function onWhatsappAccountChange(account) {
+  if (!account) {
+    selected_waba_account.value = null
+    selected_phone_number_id.value = null
+    selected_phone_number.value = null
+    return
+  }
+  console.log(account)
+
+  selected_waba_account.value = account.waba_id
+  selected_phone_number_id.value = account.phone_number_id
+  selected_phone_number.value = account.phone_number
+
+  console.log(selected_waba_account.value,selected_phone_number_id.value,selected_phone_number.value )
+}
+
 
 checkLogin()
 checkWaba()
@@ -112,6 +134,30 @@ getLandingPages()
   </div>
 
   <card>
+    <card-body class="pb-2">
+      <div class="row">
+        <div class="col-md-12">
+
+          <div class="row" style="margin-bottom:10px;">
+            <div class="flex-fill fw-bold fs-16px">
+              WhatsApp Account
+            </div>
+          </div>
+          <div class="row">
+            <div class="col-md-6">
+              <v-select
+                v-model="selected_whatsapp_account"
+                :options="whatsapp_accounts"
+                label="title"
+                placeholder="Select WhatsApp Account"
+                @update:modelValue="onWhatsappAccountChange"
+              />
+            </div>
+          </div>
+        </div>
+      </div>
+    </card-body>
+    <hr>
     <card-body class="pb-2">
       <div class="row">
         <div class="col-md-12">
